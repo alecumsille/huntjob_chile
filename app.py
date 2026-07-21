@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from core.scraper_web import extraer_texto_url, ErrorScraping
 from core.motor_ia import generar_texto, analizar_match, sugerir_respuesta, ErrorIA
@@ -78,79 +79,79 @@ st.markdown(
         background-color: {paleta_actual['primario']} !important;
         border-color: {paleta_actual['primario']} !important;
     }}
+    /* --- Eliminar borde del sidebar radio --- */
     [data-testid="stSidebar"] [role="radiogroup"] label div:first-child {{
         border-color: {paleta_actual['sidebar_primario']} !important;
-    }}
-
-    /* --- Eliminar borde y scrollbar del contenedor Streamlit del logo --- */
-    .stMarkdown:has(.hj-logo-wrap),
-    .stMarkdown:has(.hj-logo-wrap) > div,
-    [data-testid="stMarkdownContainer"]:has(.hj-logo-wrap) {{
-        overflow: visible !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-    }}
-
-    /* --- Logo animado --- */
-    @keyframes hj-float {{
-        0%, 100% {{ transform: translateY(0px); }}
-        50%        {{ transform: translateY(-7px); }}
-    }}
-    @keyframes hj-search {{
-        0%   {{ transform: translateY(0px) rotate(0deg); }}
-        25%  {{ transform: translateY(-5px) rotate(-8deg); }}
-        75%  {{ transform: translateY(-5px) rotate(8deg); }}
-        100% {{ transform: translateY(0px) rotate(0deg); }}
-    }}
-    .hj-logo-wrap {{
-        display: flex;
-        align-items: center;
-        gap: 18px;
-        margin-bottom: 2px;
-        margin-top: 8px;
-    }}
-    .hj-logo {{
-        width: 72px;
-        height: 72px;
-        animation: hj-float 3.6s ease-in-out infinite;
-        filter: drop-shadow(0 4px 10px rgba(200,127,160,0.25));
-        cursor: default;
-        transition: filter 0.3s ease;
-    }}
-    .hj-logo:hover {{
-        animation: hj-search 1.2s ease-in-out infinite;
-        filter: drop-shadow(0 6px 18px rgba(200,127,160,0.50));
-    }}
-    .hj-titulo {{
-        font-size: 2.4rem;
-        font-weight: 700;
-        color: {paleta_actual['primario']};
-        margin: 0;
-        line-height: 1.1;
-        letter-spacing: -0.5px;
-    }}
-    .hj-caption {{
-        font-size: 0.92rem;
-        color: #888;
-        margin: 4px 0 0 0;
     }}
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-st.markdown(
+components.html(
     f"""
-    <div class="hj-logo-wrap">
-        <img class="hj-logo" src="data:image/png;base64,{_logo_b64()}" alt="HuntJob Chile logo">
-        <div>
-            <p class="hj-titulo">HuntJob Chile</p>
-            <p class="hj-caption">Motor de postulaciones &mdash; extrae la oferta, analiza con IA y genera el PDF.</p>
-        </div>
+    <style>
+      body {{
+        margin: 0;
+        padding: 0;
+        background-color: {paleta_actual['fondo']};
+        overflow: hidden;
+      }}
+      @keyframes hj-float {{
+        0%, 100% {{ transform: translateY(0px); }}
+        50%       {{ transform: translateY(-7px); }}
+      }}
+      @keyframes hj-search {{
+        0%   {{ transform: translateY(0px) rotate(0deg); }}
+        25%  {{ transform: translateY(-5px) rotate(-8deg); }}
+        75%  {{ transform: translateY(-5px) rotate(8deg); }}
+        100% {{ transform: translateY(0px) rotate(0deg); }}
+      }}
+      .wrap {{
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 10px 0 6px 0;
+      }}
+      .logo {{
+        width: 72px;
+        height: 72px;
+        animation: hj-float 3.6s ease-in-out infinite;
+        filter: drop-shadow(0 4px 10px rgba(200,127,160,0.25));
+        cursor: default;
+        transition: filter 0.3s ease;
+      }}
+      .logo:hover {{
+        animation: hj-search 1.2s ease-in-out infinite;
+        filter: drop-shadow(0 6px 18px rgba(200,127,160,0.50));
+      }}
+      .titulo {{
+        font-size: 2.4rem;
+        font-weight: 700;
+        color: {paleta_actual['primario']};
+        margin: 0;
+        line-height: 1.1;
+        letter-spacing: -0.5px;
+        font-family: 'Quicksand', sans-serif;
+      }}
+      .caption {{
+        font-size: 0.92rem;
+        color: #888;
+        margin: 4px 0 0 0;
+        font-family: 'Nunito', sans-serif;
+      }}
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@700&family=Nunito:wght@400&display=swap" rel="stylesheet">
+    <div class="wrap">
+      <img class="logo" src="data:image/png;base64,{_logo_b64()}" alt="HuntJob Chile">
+      <div>
+        <p class="titulo">HuntJob Chile</p>
+        <p class="caption">Motor de postulaciones &mdash; extrae la oferta, analiza con IA y genera el PDF.</p>
+      </div>
     </div>
     """,
-    unsafe_allow_html=True,
+    height=110,
+    scrolling=False,
 )
 
 CARPETA_SALIDA = "salidas_pdf"
