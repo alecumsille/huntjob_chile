@@ -82,6 +82,16 @@ st.markdown(
         border-color: {paleta_actual['sidebar_primario']} !important;
     }}
 
+    /* --- Eliminar borde y scrollbar del contenedor Streamlit del logo --- */
+    .stMarkdown:has(.hj-logo-wrap),
+    .stMarkdown:has(.hj-logo-wrap) > div,
+    [data-testid="stMarkdownContainer"]:has(.hj-logo-wrap) {{
+        overflow: visible !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }}
+
     /* --- Logo animado --- */
     @keyframes hj-float {{
         0%, 100% {{ transform: translateY(0px); }}
