@@ -10,6 +10,7 @@ from core.motor_ia import generar_texto, analizar_match, sugerir_respuesta, Erro
 from core.generador_pdf import generar_pdf, sanear_nombre_archivo
 from core.portales import PORTALES, buscar_en_todos
 from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY, formatear_perfil
+from core.db import guardar_historial, obtener_historial_reciente
 
 st.set_page_config(page_title="HuntJob Chile", page_icon="assets/icon.png", layout="wide")
 
@@ -280,15 +281,17 @@ if seccion == "Generador por URL":
                 try:
                     contexto_perfil = formatear_perfil(perfil)
                     prompt_cv = (
-                        f"Escribe ÚNICAMENTE el extracto de perfil profesional para un CV, en español, "
-                        f"para el puesto de {puesto_objetivo} en {mercado_destino}. Usa el stack y "
-                        f"los logros reales del candidato — selecciona solo lo relevante para esta oferta, "
-                        f"no listes todo. NUNCA indiques que el candidato domina o usa una tecnología que "
-                        f"no esté textualmente en su 'Stack principal', aunque la oferta la pida — si la "
-                        f"oferta pide algo que el candidato no tiene, simplemente no lo menciones. No "
-                        f"inventes nada que no esté en el perfil. Un párrafo de 4 a 6 líneas, listo para "
-                        f"incluir en un CV real, con las palabras clave técnicas para pasar filtros ATS. "
-                        f"No agregues explicaciones, títulos ni ningún texto adicional — solo el extracto.\n\n"
+                        f"Redacta un Curriculum Vitae Completo y Profesional en español, optimizado para pasar filtros ATS, "
+                        f"diseñado para el puesto de {puesto_objetivo} en {mercado_destino}.\n"
+                        f"Usa exclusivamente el stack, experiencia y logros reales del candidato descritos en su perfil.\n"
+                        f"Estructura el CV estrictamente con las siguientes secciones limpias:\n\n"
+                        f"PERFIL PROFESIONAL\n"
+                        f"(Un extracto potente de 4 a 5 líneas enfocado en {puesto_objetivo} con palabras clave del aviso)\n\n"
+                        f"EXPERIENCIA Y LOGROS DESTACADOS\n"
+                        f"(Puntos concretos con métricas o resultados basados en la experiencia real del candidato)\n\n"
+                        f"COMPETENCIAS TÉCNICAS Y HERRAMIENTAS\n"
+                        f"(Listado estructurado del stack tecnológico que calza con el aviso)\n\n"
+                        f"NUNCA inventes tecnologías o empresas que no estén en el perfil del candidato.\n\n"
                         f"Perfil del candidato:\n{contexto_perfil}"
                     )
                     nombre_firma = perfil["nombre"] or "Candidato/a"
@@ -316,8 +319,19 @@ if seccion == "Generador por URL":
             ruta_cl = os.path.join(CARPETA_SALIDA, f"CoverLetter_{nombre_archivo}_{cargo_limpio}.pdf")
 
             try:
-                generar_pdf(ruta_cv, cv_adaptado, "CV", puesto_objetivo, perfil, estilo_nombre=estilo_pdf)
+                generar_pdf(ruta_cv, cv_adaptado, "CV Profesional", puesto_objetivo, perfil, estilo_nombre=estilo_pdf)
                 generar_pdf(ruta_cl, cover_letter_adaptada, "Cover Letter", puesto_objetivo, perfil, estilo_nombre=estilo_pdf)
+                
+                # Guardar en memoria de base de datos SQLite
+                guardar_historial(
+                    puesto=puesto_objetivo,
+                    empresa="Empresa del aviso",
+                    mercado=mercado_destino,
+                    url_oferta=url_oferta,
+                    cv_texto=cv_adaptado,
+                    cover_letter_texto=cover_letter_adaptada,
+                    estilo_pdf=estilo_pdf
+                )
             except ValueError as e:
                 st.error(f"Error al generar el PDF: {e}", icon=":material/error:")
                 st.stop()
