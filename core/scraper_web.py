@@ -171,13 +171,17 @@ def buscar_chiletrabajos(palabra_clave: str, cantidad_paginas: int = 1) -> list[
                 texto_meta = elemento_empresa_ubicacion.get_text(strip=True)
                 empresa = texto_meta.split(",")[0].strip() or "No especificada"
 
+            link = elemento_titulo.get("href", "")
+            if link and not link.startswith("http"):
+                link = f"https://www.chiletrabajos.cl{link}"
+
             resultados.append({
                 "titulo": elemento_titulo.get_text(strip=True),
                 "empresa": empresa,
                 "ubicacion": elemento_ubicacion.get_text(strip=True) if elemento_ubicacion else "No especificada",
                 "modalidad": "",
                 "publicado": metas[1].get_text(strip=True) if len(metas) > 1 else "",
-                "link": elemento_titulo.get("href", ""),
+                "link": link,
             })
 
     return resultados

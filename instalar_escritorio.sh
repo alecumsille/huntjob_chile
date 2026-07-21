@@ -28,6 +28,7 @@ fi
 
 source venv/bin/activate
 pip install -q -r requirements.txt
+pip install -q -r requirements-desktop.txt
 
 echo "Instalando lanzador en el menu de aplicaciones..."
 mkdir -p "$HOME/.local/share/applications"

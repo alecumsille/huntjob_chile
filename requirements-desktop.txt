@@ -1,0 +1,11 @@
+# Dependencias exclusivas de la app de escritorio (desktop.py).
+# NO se usan en el despliegue web — Streamlit Community Cloud instala
+# solo requirements.txt, que no contiene esto.
+#
+# Instalar con:
+#   source venv/bin/activate
+#   pip install -r requirements-desktop.txt
+#
+# Nota: pywebview también necesita librerías del sistema (GTK/WebKit).
+# El script instalar_escritorio.sh las instala automáticamente vía apt.
+pywebview

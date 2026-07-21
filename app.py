@@ -7,7 +7,7 @@ from core.scraper_web import extraer_texto_url, ErrorScraping
 from core.motor_ia import generar_texto, analizar_match, sugerir_respuesta, ErrorIA
 from core.generador_pdf import generar_pdf, sanear_nombre_archivo
 from core.portales import PORTALES, buscar_en_todos
-from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY
+from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY, formatear_perfil
 
 st.set_page_config(page_title="HuntJob Chile", page_icon="assets/icon.png", layout="wide")
 
@@ -152,12 +152,7 @@ if seccion == "Generador por URL":
 
             with st.spinner("Redactando documentos con Gemini..."):
                 try:
-                    contexto_perfil = (
-                        f"Años de experiencia: {perfil.get('anos_experiencia', 0)}\n"
-                        f"Nivel: {perfil.get('seniority', '')}\n"
-                        f"Stack principal: {perfil.get('stack_principal', '')}\n"
-                        f"Logros y experiencia: {perfil.get('logros_y_experiencia', '')}"
-                    )
+                    contexto_perfil = formatear_perfil(perfil)
                     prompt_cv = (
                         f"Escribe ÚNICAMENTE el extracto de perfil profesional para un CV, en español, "
                         f"para el puesto de {puesto_objetivo} en {mercado_destino}. Basate en el stack y "

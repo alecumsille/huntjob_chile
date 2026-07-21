@@ -56,3 +56,17 @@ def guardar_perfil(datos: dict) -> None:
     os.makedirs(CARPETA_PERFIL, exist_ok=True)
     with open(RUTA_PERFIL, "w", encoding="utf-8") as archivo:
         yaml.safe_dump(datos, archivo, allow_unicode=True, sort_keys=False)
+
+
+def formatear_perfil(perfil: dict) -> str:
+    """
+    Serializa el perfil como texto plano para incluir en prompts de IA.
+    Fuente única para motor_ia.py y app.py — evita duplicar el formato
+    en tres lugares distintos.
+    """
+    return (
+        f"Años de experiencia: {perfil.get('anos_experiencia', 0)}\n"
+        f"Nivel: {perfil.get('seniority', '')}\n"
+        f"Stack principal: {perfil.get('stack_principal', '')}\n"
+        f"Logros y experiencia: {perfil.get('logros_y_experiencia', '')}"
+    )

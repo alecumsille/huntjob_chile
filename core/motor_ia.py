@@ -9,10 +9,12 @@ import json
 import os
 import requests
 
+from core.perfil import formatear_perfil
+
 URL_API = "https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent"
-MODELO = "gemini-3.1-flash-lite"
+MODELO = "gemini-2.0-flash-lite"
 TIMEOUT_SEGUNDOS = 30
-LIMITE_CARACTERES_CONTEXTO = 4000
+LIMITE_CARACTERES_CONTEXTO = 10000
 
 
 class ErrorIA(Exception):
@@ -91,12 +93,7 @@ def analizar_match(texto_oferta: str, perfil: dict) -> dict:
     """
     api_key = _obtener_api_key()
 
-    contexto_perfil = (
-        f"Años de experiencia: {perfil.get('anos_experiencia', 0)}\n"
-        f"Nivel: {perfil.get('seniority', '')}\n"
-        f"Stack principal: {perfil.get('stack_principal', '')}\n"
-        f"Logros y experiencia: {perfil.get('logros_y_experiencia', '')}"
-    )
+    contexto_perfil = formatear_perfil(perfil)
     prompt = (
         "Compara el perfil del candidato contra la oferta laboral. Da un score de 0 "
         "a 100 de qué tan buen match es, y una explicación breve (2 a 3 líneas) de "
@@ -165,12 +162,7 @@ def sugerir_respuesta(pregunta: str, perfil: dict, opciones: list[str] | None = 
     """
     api_key = _obtener_api_key()
 
-    contexto_perfil = (
-        f"Años de experiencia: {perfil.get('anos_experiencia', 0)}\n"
-        f"Nivel: {perfil.get('seniority', '')}\n"
-        f"Stack principal: {perfil.get('stack_principal', '')}\n"
-        f"Logros y experiencia: {perfil.get('logros_y_experiencia', '')}"
-    )
+    contexto_perfil = formatear_perfil(perfil)
 
     propiedad_respuesta = {"type": "STRING"}
     instruccion_opciones = ""
