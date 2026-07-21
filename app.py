@@ -14,18 +14,6 @@ from core.db import guardar_historial, obtener_historial_reciente
 
 st.set_page_config(page_title="HuntJob Chile", page_icon="assets/icon.png", layout="wide")
 
-# Redirección automática si alguien accede directamente a la URL de Streamlit Cloud
-components.html(
-    """
-    <script>
-    if (window.location.hostname.includes("streamlit.app")) {
-        window.location.href = "https://huntjob.cumsille.me";
-    }
-    </script>
-    """,
-    height=0,
-)
-
 
 def _logo_b64() -> str:
     """Lee el logo y lo devuelve en base64 para embeber en HTML."""
@@ -75,153 +63,244 @@ if not st.session_state.get("autenticado"):
     st.markdown(
         f"""
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Quicksand:wght@600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
-        .hero-container {{
-            text-align: center;
-            padding: 40px 20px 20px 20px;
-            max-width: 900px;
-            margin: 0 auto;
+        /* Ocultar elementos nativos innecesarios de Streamlit en la Landing */
+        #MainMenu, footer, header {{ visibility: hidden; }}
+
+        .stApp {{
+            background: #0D0F12 !important;
+            color: #E2E8F0 !important;
+            font-family: 'Inter', -apple-system, sans-serif !important;
         }}
-        .hero-badge {{
+
+        .agency-hero {{
+            max-width: 1040px;
+            margin: 40px auto 20px auto;
+            padding: 0 20px;
+            text-align: center;
+        }}
+
+        .agency-pill {{
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            background: linear-gradient(135deg, rgba(200, 127, 160, 0.1), rgba(91, 155, 213, 0.1));
-            border: 1px solid rgba(200, 127, 160, 0.3);
-            color: #C87FA0;
-            padding: 6px 16px;
-            border-radius: 50px;
-            font-size: 0.88rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-            font-family: 'Plus Jakarta Sans', sans-serif;
+            gap: 10px;
+            padding: 6px 18px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 100px;
+            font-size: 0.8rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #A0AEC0;
+            margin-bottom: 28px;
+            backdrop-filter: blur(10px);
         }}
-        .hero-title {{
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            font-size: 2.8rem;
-            font-weight: 800;
-            color: #2D3748;
-            line-height: 1.2;
-            margin-bottom: 16px;
-            background: linear-gradient(135deg, #2D3748 0%, #C87FA0 100%);
+
+        .agency-title {{
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(2.4rem, 5vw, 4.2rem);
+            font-weight: 700;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            color: #FFFFFF;
+            margin-bottom: 24px;
+        }}
+
+        .agency-title span {{
+            background: linear-gradient(135deg, #A855F7 0%, #EC4899 50%, #3B82F6 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }}
-        .hero-subtitle {{
-            font-family: 'Quicksand', sans-serif;
-            font-size: 1.2rem;
-            color: #64748B;
-            max-width: 650px;
-            margin: 0 auto 30px auto;
+
+        .agency-subtitle {{
+            font-size: 1.15rem;
             line-height: 1.6;
-            font-weight: 600;
+            color: #94A3B8;
+            max-width: 680px;
+            margin: 0 auto 50px auto;
+            font-weight: 400;
         }}
 
-        /* Grid de Beneficios */
-        .features-grid {{
+        /* Grid de métricas/características estilo agencia */
+        .agency-grid {{
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 20px;
-            max-width: 900px;
-            margin: 30px auto 40px auto;
-            padding: 0 10px;
-        }}
-        .feature-card {{
-            background: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            border-radius: 16px;
-            padding: 22px;
-            text-align: left;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-        }}
-        .feature-card:hover {{
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(200, 127, 160, 0.12);
-            border-color: #C87FA0;
-        }}
-        .feature-icon {{
-            font-size: 2rem;
-            margin-bottom: 12px;
-            display: inline-block;
-        }}
-        .feature-title {{
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #1E293B;
-            margin-bottom: 6px;
-        }}
-        .feature-desc {{
-            font-family: 'Quicksand', sans-serif;
-            font-size: 0.9rem;
-            color: #64748B;
-            line-height: 1.5;
-            font-weight: 600;
+            max-width: 1000px;
+            margin: 0 auto 60px auto;
+            padding: 0 20px;
         }}
 
-        .auth-card-landing {{
-            background-color: #FFFFFF;
-            border: 1.5px solid #F1F5F9;
-            border-radius: 20px;
-            padding: 32px 28px;
-            box-shadow: 0 15px 35px rgba(200, 127, 160, 0.1);
+        @media (max-width: 768px) {{
+            .agency-grid {{
+                grid-template-columns: 1fr;
+            }}
+        }}
+
+        .agency-card {{
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 28px 24px;
+            text-align: left;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }}
+
+        .agency-card:hover {{
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(168, 85, 247, 0.4);
+            transform: translateY(-2px);
+        }}
+
+        .agency-card-num {{
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #A855F7;
+            margin-bottom: 14px;
+            letter-spacing: 0.1em;
+        }}
+
+        .agency-card-heading {{
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #F8FAFC;
+            margin-bottom: 10px;
+        }}
+
+        .agency-card-text {{
+            font-size: 0.92rem;
+            line-height: 1.55;
+            color: #64748B;
+        }}
+
+        /* Tarjeta de autenticación de lujo */
+        .agency-auth-wrapper {{
+            max-width: 440px;
+            margin: 0 auto 60px auto;
+            padding: 36px 32px;
+            background: rgba(18, 20, 26, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
             text-align: center;
         }}
-        .auth-card-title {{
-            font-family: 'Plus Jakarta Sans', sans-serif;
+
+        .agency-auth-header {{
+            font-family: 'Space Grotesk', sans-serif;
             font-size: 1.35rem;
             font-weight: 700;
-            color: #1E293B;
-            margin-bottom: 8px;
+            color: #FFFFFF;
+            margin-bottom: 6px;
+        }}
+
+        .agency-auth-sub {{
+            font-size: 0.88rem;
+            color: #64748B;
+            margin-bottom: 28px;
+        }}
+
+        .social-btn-link {{
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 12px !important;
+            width: 100% !important;
+            height: 48px !important;
+            border-radius: 12px !important;
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 600 !important;
+            font-size: 0.95rem !important;
+            text-decoration: none !important;
+            transition: all 0.2s ease !important;
+            margin-bottom: 12px !important;
+            box-sizing: border-box !important;
+        }}
+
+        .btn-g-style {{
+            background: #FFFFFF !important;
+            color: #0F172A !important;
+            border: 1px solid #FFFFFF !important;
+        }}
+        .btn-g-style:hover {{
+            background: #F1F5F9 !important;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.15) !important;
+        }}
+
+        .btn-gh-style {{
+            background: #1E293B !important;
+            color: #F8FAFC !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }}
+        .btn-gh-style:hover {{
+            background: #334155 !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+        }}
+
+        .btn-fb-style {{
+            background: #1877F2 !important;
+            color: #FFFFFF !important;
+            border: 1px solid #1877F2 !important;
+        }}
+        .btn-fb-style:hover {{
+            background: #166FE5 !important;
+            box-shadow: 0 0 20px rgba(24, 119, 242, 0.3) !important;
+        }}
+
+        .icon-img {{
+            width: 20px !important;
+            height: 20px !important;
+            object-fit: contain !important;
         }}
         </style>
 
-        <div class="hero-container">
-            <div class="hero-badge">
-                <img src="data:image/png;base64,{_chile_b64()}" width="20" style="border-radius:3px;">
-                Plataforma Inteligente de Empleos #1 en Chile
+        <div class="agency-hero">
+            <div class="agency-pill">
+                <img src="data:image/png;base64,{_chile_b64()}" width="16" style="border-radius:2px; opacity:0.9;">
+                CHILE — RECRUITMENT ENGINE
             </div>
-            <div class="hero-title">Encuentra tu trabajo ideal y adáptalo con Inteligencia Artificial</div>
-            <div class="hero-subtitle">
-                Centraliza las mejores ofertas de Chile (Get on Board, Chiletrabajos, Trabajando, Laborum y LinkedIn) y genera currículums optimizados para filtros ATS en segundos.
-            </div>
+            <h1 class="agency-title">
+                Impulsa tu carrera con <span>inteligencia adaptativa</span>
+            </h1>
+            <p class="agency-subtitle">
+                Centralización ejecutiva de ofertas laborales y generación automatizada de currículums optimizados bajo estándares ATS.
+            </p>
         </div>
 
-        <div class="features-grid">
-            <div class="feature-card">
-                <span class="feature-icon">🔍</span>
-                <div class="feature-title">Multi-Buscador Real</div>
-                <div class="feature-desc">Busca simultáneamente en todos los portales de empleo de Chile sin perder tiempo abriendo pestañas.</div>
+        <div class="agency-grid">
+            <div class="agency-card">
+                <div class="agency-card-num">01 / MOTOR DE BÚSQUEDA</div>
+                <div class="agency-card-heading">Indexación Multicanal</div>
+                <div class="agency-card-text">Agregación en tiempo real de convocatorias desde Get on Board, Chiletrabajos, Trabajando y LinkedIn.</div>
             </div>
-            <div class="feature-card">
-                <span class="feature-icon">⚡</span>
-                <div class="feature-title">CV Adaptativo ATS</div>
-                <div class="feature-desc">Nuestra IA reescribe tu CV a la medida de la oferta seleccionada para superar los filtros automáticos.</div>
+            <div class="agency-card">
+                <div class="agency-card-num">02 / SINTETIZADOR IA</div>
+                <div class="agency-card-heading">Adaptación de Perfil</div>
+                <div class="agency-card-text">Reescritura contextual de competencias para alineación directa con los requisitos de la vacante.</div>
             </div>
-            <div class="feature-card">
-                <span class="feature-icon">📄</span>
-                <div class="feature-title">PDFs Nivel Ejecutivo</div>
-                <div class="feature-desc">Descarga currículums elegantes en 4 plantillas visuales pastel diseñadas para destacar.</div>
+            <div class="agency-card">
+                <div class="agency-card-num">03 / FORMATO EDITORIAL</div>
+                <div class="agency-card-heading">Documentos ATS</div>
+                <div class="agency-card-text">Exportación de currículums en PDF estructurados para garantizar legibilidad en sistemas de reclutamiento.</div>
             </div>
         </div>
         """,
         unsafe_allow_html=True
     )
-    col_a, col_b, col_c = st.columns([1, 2, 1])
+
+    col_a, col_b, col_c = st.columns([1, 1.2, 1])
     with col_b:
         g_b64 = _social_icon_b64("google")
         gh_b64 = _social_icon_b64("github")
         fb_b64 = _social_icon_b64("facebook")
 
-        g_b64 = _social_icon_b64("google")
-        gh_b64 = _social_icon_b64("github")
-        fb_b64 = _social_icon_b64("facebook")
-
         supabase_url = st.secrets.get("SUPABASE_URL", "https://oonkwgfawfyqtrndshhu.supabase.co")
-
-        # URLs reales de OAuth de Supabase para cada proveedor
         redirect_target = "https://huntjob.cumsille.me"
         url_google = f"{supabase_url}/auth/v1/authorize?provider=google&redirect_to={redirect_target}"
         url_github = f"{supabase_url}/auth/v1/authorize?provider=github&redirect_to={redirect_target}"
@@ -229,77 +308,25 @@ if not st.session_state.get("autenticado"):
 
         st.markdown(
             f"""
-            <style>
-            .social-btn-link {{
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                gap: 14px !important;
-                width: 100% !important;
-                height: 52px !important;
-                border-radius: 12px !important;
-                font-family: 'Quicksand', sans-serif !important;
-                font-weight: 700 !important;
-                font-size: 1.05rem !important;
-                text-decoration: none !important;
-                transition: all 0.2s ease-in-out !important;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important;
-                margin-bottom: 14px !important;
-                box-sizing: border-box !important;
-            }}
-            .btn-g-style {{
-                background-color: #FFFFFF !important;
-                color: #3C4043 !important;
-                border: 1.5px solid #DADCE0 !important;
-            }}
-            .btn-g-style:hover {{
-                background-color: #F8F9FA !important;
-                border-color: #C6C8CC !important;
-                box-shadow: 0 6px 18px rgba(0,0,0,0.1) !important;
-                transform: translateY(-1px);
-            }}
-            .btn-gh-style {{
-                background-color: #24292E !important;
-                color: #FFFFFF !important;
-                border: 1.5px solid #24292E !important;
-            }}
-            .btn-gh-style:hover {{
-                background-color: #1B1F23 !important;
-                box-shadow: 0 6px 18px rgba(36,41,46,0.3) !important;
-                transform: translateY(-1px);
-            }}
-            .btn-fb-style {{
-                background-color: #1877F2 !important;
-                color: #FFFFFF !important;
-                border: 1.5px solid #1877F2 !important;
-            }}
-            .btn-fb-style:hover {{
-                background-color: #166FE5 !important;
-                box-shadow: 0 6px 18px rgba(24,119,242,0.3) !important;
-                transform: translateY(-1px);
-            }}
-            .icon-img {{
-                width: 24px !important;
-                height: 24px !important;
-                object-fit: contain !important;
-                flex-shrink: 0 !important;
-            }}
-            </style>
+            <div class="agency-auth-wrapper">
+                <div class="agency-auth-header">Acceso a la plataforma</div>
+                <div class="agency-auth-sub">Autentícate para gestionar tus postulaciones</div>
 
-            <a href="{url_google}" class="social-btn-link btn-g-style" target="_self">
-                <img src="data:image/png;base64,{g_b64}" class="icon-img" alt="Google">
-                <span>Continuar con Google</span>
-            </a>
+                <a href="{url_google}" class="social-btn-link btn-g-style" target="_self">
+                    <img src="data:image/png;base64,{g_b64}" class="icon-img" alt="Google">
+                    <span>Continuar con Google</span>
+                </a>
 
-            <a href="{url_github}" class="social-btn-link btn-gh-style" target="_self">
-                <img src="data:image/png;base64,{gh_b64}" class="icon-img" alt="GitHub">
-                <span>Continuar con GitHub</span>
-            </a>
+                <a href="{url_github}" class="social-btn-link btn-gh-style" target="_self">
+                    <img src="data:image/png;base64,{gh_b64}" class="icon-img" alt="GitHub">
+                    <span>Continuar con GitHub</span>
+                </a>
 
-            <a href="{url_facebook}" class="social-btn-link btn-fb-style" target="_self">
-                <img src="data:image/png;base64,{fb_b64}" class="icon-img" alt="Facebook">
-                <span>Continuar con Facebook</span>
-            </a>
+                <a href="{url_facebook}" class="social-btn-link btn-fb-style" target="_self">
+                    <img src="data:image/png;base64,{fb_b64}" class="icon-img" alt="Facebook">
+                    <span>Continuar con Facebook</span>
+                </a>
+            </div>
             """,
             unsafe_allow_html=True
         )
