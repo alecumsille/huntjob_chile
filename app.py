@@ -152,20 +152,32 @@ if seccion == "Generador por URL":
 
             with st.spinner("Redactando documentos con Gemini..."):
                 try:
+                    contexto_perfil = (
+                        f"Años de experiencia: {perfil.get('anos_experiencia', 0)}\n"
+                        f"Nivel: {perfil.get('seniority', '')}\n"
+                        f"Stack principal: {perfil.get('stack_principal', '')}\n"
+                        f"Logros y experiencia: {perfil.get('logros_y_experiencia', '')}"
+                    )
                     prompt_cv = (
                         f"Escribe ÚNICAMENTE el extracto de perfil profesional para un CV, en español, "
-                        f"para el puesto de {puesto_objetivo} en {mercado_destino}, enfocado en Python, "
-                        f"arquitectura backend y automatización. Un párrafo de 4 a 6 líneas, listo para "
-                        f"pegar directo en un CV real, con las palabras clave técnicas relevantes para "
-                        f"pasar filtros ATS. No agregues explicaciones, títulos, análisis de por qué "
-                        f"funciona, consejos, ni ningún texto dirigido al candidato — solo el extracto en sí."
+                        f"para el puesto de {puesto_objetivo} en {mercado_destino}. Basate en el stack y "
+                        f"los logros reales del candidato de abajo — seleccioná solo lo que sea relevante "
+                        f"para esta oferta puntual, no listes todo, y no inventes nada que no esté en el "
+                        f"perfil. Un párrafo de 4 a 6 líneas, listo para pegar directo en un CV real, con "
+                        f"las palabras clave técnicas relevantes para pasar filtros ATS. No agregues "
+                        f"explicaciones, títulos, análisis de por qué funciona, consejos, ni ningún texto "
+                        f"dirigido al candidato — solo el extracto en sí.\n\n"
+                        f"Perfil del candidato:\n{contexto_perfil}"
                     )
                     nombre_firma = perfil["nombre"] or "Candidato/a"
                     prompt_cover = (
                         f"Escribe ÚNICAMENTE el cuerpo de una Cover Letter en español, directa y sin rodeos, "
-                        f"para el puesto de {puesto_objetivo} en {mercado_destino}. Firma con el nombre "
-                        f"{nombre_firma}. No agregues explicaciones, análisis, ni ningún texto que no sea "
-                        f"la carta en sí."
+                        f"para el puesto de {puesto_objetivo} en {mercado_destino}. Si el perfil de abajo "
+                        f"tiene logros o experiencia cargada, mencioná como máximo uno concreto que calce "
+                        f"con esta oferta puntual, en vez de lenguaje genérico de relleno — si no hay logros "
+                        f"cargados, escribí sin inventar ninguno. Firma con el nombre {nombre_firma}. No "
+                        f"agregues explicaciones, análisis, ni ningún texto que no sea la carta en sí.\n\n"
+                        f"Perfil del candidato:\n{contexto_perfil}"
                     )
 
                     cv_adaptado = generar_texto(prompt_cv, st.session_state.texto_extraido)
