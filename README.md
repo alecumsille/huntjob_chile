@@ -127,7 +127,18 @@ Esto creará el acceso directo en el menú de tu sistema con la ventana nativa (
 
 ---
 
+## 🤝 ¿Cómo Contribuir al Proyecto?
+
+¡Toda contribución es bienvenida! Si quieres colaborar a impulsar la empleabilidad en Chile y mejorar la plataforma:
+
+1. **Añadir Nuevos Portales de Empleo:** Crea o mejora scrapers en `core/scraper_web.py` (ej. Laborum, Indeed, TrabajoConSentido).
+2. **Reportar Errores o Sugerencias:** Abre un [Issue en GitHub](https://github.com/alecumsille/huntjob_chile/issues) detallando la mejora.
+3. **Enviar Pull Requests:** Haz un fork del repositorio, crea tu rama (`git checkout -b feature/nueva-funcionalidad`) y envía tus cambios.
+
+---
+
 ## 📄 Licencia & Créditos
 
-Desarrollado con ❤️ para impulsar el talento en Chile.  
+Desarrollado con ❤️ por Alejandro Cumsille para impulsar el talento en Chile.  
+Distribuido bajo la **Licencia MIT**.  
 Sitio Oficial: [https://huntjob.cumsille.me](https://huntjob.cumsille.me)
