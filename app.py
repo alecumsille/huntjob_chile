@@ -11,6 +11,32 @@ from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY
 
 st.set_page_config(page_title="HuntJob Chile", page_icon=":material/work:", layout="wide")
 
+
+def _clave_configurada() -> str:
+    """
+    Devuelve la clave de acceso configurada vía st.secrets (solo aplica en
+    un despliegue público, ej. Streamlit Community Cloud). En uso local o
+    en la app de escritorio no hay secrets.toml, así que esto devuelve ""
+    y la app no pide clave — el gate solo existe para el despliegue web.
+    """
+    try:
+        return st.secrets.get("APP_PASSWORD", "")
+    except Exception:
+        return ""
+
+
+clave_requerida = _clave_configurada()
+if clave_requerida and not st.session_state.get("autenticado"):
+    st.title("HuntJob Chile")
+    clave_ingresada = st.text_input("Clave de acceso", type="password")
+    if clave_ingresada:
+        if clave_ingresada == clave_requerida:
+            st.session_state.autenticado = True
+            st.rerun()
+        else:
+            st.error("Clave incorrecta.", icon=":material/error:")
+    st.stop()
+
 # Rotación horaria de paleta: 4 variantes pastel, una por franja horaria
 # (hora % 4). El theme nativo de Streamlit (.streamlit/config.toml) es fijo
 # por proceso, así que la única forma de cambiar colores sin reiniciar el

@@ -20,12 +20,27 @@ class ErrorIA(Exception):
 
 
 def _obtener_api_key() -> str:
+    """
+    Busca la key primero en la variable de entorno GEMINI_API_KEY (uso
+    local / app de escritorio), y si no está, en st.secrets (necesario en
+    Streamlit Community Cloud, que no inyecta secrets como variables de
+    entorno). Se importa streamlit acá adentro para no acoplar este
+    módulo a Streamlit cuando no hace falta.
+    """
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not api_key:
+        try:
+            import streamlit as st
+            api_key = st.secrets.get("GEMINI_API_KEY", "").strip()
+        except Exception:
+            api_key = ""
+
+    if not api_key:
         raise ErrorIA(
-            "Falta la variable de entorno GEMINI_API_KEY. "
-            "Consigue una key gratis en https://aistudio.google.com/apikey "
-            "y expórtala antes de correr la app: export GEMINI_API_KEY=tu-key"
+            "Falta GEMINI_API_KEY. Consigue una key gratis en "
+            "https://aistudio.google.com/apikey y expórtala antes de correr "
+            "la app (export GEMINI_API_KEY=tu-key) o configúrala en "
+            "st.secrets si corre en Streamlit Community Cloud."
         )
     return api_key
 

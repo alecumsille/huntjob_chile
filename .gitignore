@@ -3,3 +3,4 @@ __pycache__/
 salidas_pdf/
 venv/
 perfil/
+.streamlit/secrets.toml

@@ -53,6 +53,44 @@ python3 desktop.py
 Cerrar la ventana (o matar el proceso) termina el servidor de Streamlit
 que corre por detrás — no queda nada corriendo en segundo plano.
 
+## Despliegue web (Streamlit Community Cloud)
+
+Para tener la app accesible por internet mientras se decide qué hacer con
+la app Android/de escritorio a largo plazo. Streamlit Community Cloud es
+gratis y se conecta directo al repo de GitHub:
+
+1. Andá a [share.streamlit.io](https://share.streamlit.io), conectá tu
+   cuenta de GitHub y elegí este repo (`alecumsille/huntjob_chile`),
+   archivo principal `app.py`.
+2. En la configuración de la app (menú "Settings" → "Secrets"), pegá:
+   ```toml
+   GEMINI_API_KEY = "tu-key-de-gemini"
+   APP_PASSWORD = "una-clave-que-solo-sepas-vos"
+   ```
+   `APP_PASSWORD` es obligatorio para un despliegue público: sin él, cualquiera
+   que entre al link vería y podría sobreescribir tu perfil (`Mi Perfil` se
+   guarda en un solo archivo compartido en el servidor, no hay separación
+   por usuario todavía — eso es trabajo de una fase futura de multiusuario).
+   Con `APP_PASSWORD` configurado, la app pide esa clave antes de mostrar
+   nada; sin él (como en uso local), no pide clave.
+3. Deploy. Streamlit te da una URL tipo `https://algo.streamlit.app`.
+
+**Sobre el dominio `.me`:** Streamlit Community Cloud no ofrece dominios
+personalizados nativos en el plan gratis (no es como Vercel/Netlify) — no
+pude confirmar una forma soportada de apuntar tu dominio directo a la app
+manteniendo la URL propia en la barra de direcciones. Opciones reales:
+
+- **Redirect simple** desde tu dominio `.me` hacia la URL `.streamlit.app`
+  (se configura en el panel de tu registrador de dominio) — la barra de
+  direcciones va a mostrar la URL de Streamlit después de redirigir, no
+  tu dominio. Rápido de armar, pero no es un dominio "de verdad" para la app.
+- **Self-host en tu droplet de DigitalOcean** (donde ya corren tus otros
+  bots) con Nginx + Let's Encrypt — ahí sí el dominio queda 100% tuyo en
+  la barra de direcciones, pero requiere configurar el servidor a mano
+  (proceso persistente, proxy reverso, certificado HTTPS). Si en algún
+  momento esto se vuelve prioridad, es un paso aparte, no algo que se
+  resuelva solo con Streamlit Community Cloud.
+
 ## Portales soportados
 
 | Portal | Método |
