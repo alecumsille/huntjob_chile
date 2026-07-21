@@ -43,6 +43,28 @@
 
 ---
 
+## 🏗️ Arquitectura del Repositorio Fusionado
+
+```
+huntjob_chile/
+├── app.py                      # Interfaz web principal (Streamlit)
+├── desktop.py                  # Envoltorio para aplicación de escritorio nativa GTK/WebKit
+├── Dockerfile                  # Contenedor listo para despliegues con CNAME (Render/Koyeb)
+├── assets/                     # Recursos gráficos corporativos e iconos oficiales Icons8
+├── core/
+│   ├── scraper_web.py          # Extracción y parsing HTML/API de portales laborales
+│   ├── portales.py             # Dispatcher de búsqueda agregada multi-portal
+│   ├── motor_ia.py             # Motor de generación y auditoría ATS con fallback Gemini -> Groq
+│   ├── generador_pdf.py        # Compilador ReportLab para plantillas visuales de CV
+│   ├── perfil.py               # Módulo de sesión aislada de perfil de usuario
+│   ├── db.py                   # Persistencia relacional SQLite para historial
+│   ├── job_hunter_bot.py       # Demonio de rastreo en segundo plano y deduplicación de empleos
+│   └── sync_mis_empleos.py     # Sincronizador multicanal de postulación
+└── requirements.txt            # Dependencias del sistema
+```
+
+---
+
 ## 🚀 Instalación y Ejecución Local
 
 1. **Clonar el repositorio:**
