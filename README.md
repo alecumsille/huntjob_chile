@@ -1,171 +1,102 @@
-# HuntJob Chile
+# 🚀 HuntJob Chile — Plataforma Inteligente de Empleos & Auditoría ATS
 
-Herramienta local para postulaciones: extrae el contenido de una oferta laboral desde su URL, genera CV y Cover Letter adaptados usando Gemini (Google AI), y compila los PDFs. Incluye buscador de vacantes reales en múltiples portales chilenos.
+[![Sitio Web Oficial](https://img.shields.io/badge/Sitio_Web-huntjob.cumsille.me-blue?style=for-the-badge&logo=googlechrome&logoColor=white)](https://huntjob.cumsille.me)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Render](https://img.shields.io/badge/Despliegue-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://render.com/)
 
-## Requisitos
+**HuntJob Chile** es la suite de aceleración laboral diseñada para profesionales y talentos en Chile. Reúne en un solo lugar la búsqueda en tiempo real en los principales portales del país (**Get on Board, Chiletrabajos, Trabajando, Laborum y LinkedIn**), audita tu perfil contra las vacantes usando Inteligencia Artificial de última generación y genera currículums optimizados en PDF diseñados para superar los filtros **ATS (Applicant Tracking Systems)**.
 
-- Python 3.10+
-- Una API key de Gemini, gratis en [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+---
 
-## Instalación
+## 🔥 ¿Por qué destaca HuntJob Chile frente a otras plataformas?
+
+| Característica | Portales Tradicionales | Otras Apps con IA | **HuntJob Chile** |
+|---|:---:|:---:|:---:|
+| **Búsqueda Multi-Portal** | ❌ 1 solo portal por pestaña | ❌ Requiere copiar URLs a mano | **✅ Indexación agregada en tiempo real** |
+| **Auditoría ATS en Vivo** | ❌ No disponible | ⚠️ Respuestas genéricas | **✅ Score 0-100%, fortalezas y palabras faltantes** |
+| **Disponibilidad Indestructible** | ⚠️ Fallan si el servidor se satura | ❌ Bloqueo por límites de cuota (429) | **✅ Motor Híbrido Gemini + Groq (Llama 3.3 70B)** |
+| **Exportación Ejecutiva** | ❌ Formatos básicos o planos | ❌ Cobros por descargar PDF | **✅ 4 plantillas visuales PDF de descarga gratuita** |
+| **Privacidad & Aislamiento** | ⚠️ Venta de datos personales | ⚠️ Datos compartidos en la nube | **✅ Sesión aislada en memoria sin persistir tu CV** |
+
+---
+
+## ✨ Novedades & Funcionalidades Destacadas
+
+- 🔍 **Indexación Multicanal en Tiempo Real:** Busca simultáneamente en los portales más importantes de Chile sin perder tiempo abriendo decenas de pestañas.
+- 🎯 **Auditoría de Compatibilidad ATS:** Analiza el nivel de coincidencia de tu perfil con la vacante objetivo. Recibe un diagnóstico con:
+  - Puntaje de compatibilidad (Score 0-100%).
+  - Fortalezas detectadas en tu perfil.
+  - Palabras clave y herramientas faltantes en tu CV.
+  - Recomendaciones tácticas de optimización.
+- ⚡ **Resiliencia & Cero Caídas de IA:** Implementa una arquitectura con fallback automático (Google Gemini 2.0 Flash -> Groq Llama 3.3 70B). Si una API alcanza su límite de cuotas, la otra toma el relevo de forma transparente.
+- 📄 **Generador de CVs & Cover Letters en PDF:** Produce documentos estructurados, elegantes y listos para enviar en 4 paletas de diseño ejecutivo (Pastel, Ejecutivo, Minimalista Oscuro, Esmeralda).
+- 🔒 **Social Auth & Sesión Segura:** Integración nativa de autenticación con Google, GitHub y Facebook vía Supabase.
+
+---
+
+## 🛠️ Requisitos del Sistema
+
+- **Python 3.10+** (para ejecución local o servidores dedicados)
+- **Docker** (para despliegue en contenedores)
+- API Keys opcionales: `GEMINI_API_KEY`, `GROQ_API_KEY` (configurables en variables de entorno)
+
+---
+
+## 🚀 Instalación y Ejecución Local
+
+1. **Clonar el repositorio:**
+   ```bash
+   git clone https://github.com/alecumsille/huntjob_chile.git
+   cd huntjob_chile
+   ```
+
+2. **Crear entorno virtual e instalar dependencias:**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+3. **Configurar claves de entorno (opcional):**
+   ```bash
+   export GEMINI_API_KEY="tu_clave_gemini"
+   export GROQ_API_KEY="tu_clave_groq"
+   ```
+
+4. **Lanzar la aplicación:**
+   ```bash
+   streamlit run app.py
+   ```
+
+---
+
+## 🐳 Ejecución con Docker
+
+Si prefieres ejecutar la aplicación dentro de un contenedor o desplegarla en servicios como Render, Railway o Koyeb:
 
 ```bash
-git clone https://github.com/alecumsille/huntjob_chile.git
-cd huntjob_chile
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-export GEMINI_API_KEY=tu-key-de-gemini
+# Construir la imagen Docker
+docker build -t huntjob-chile .
+
+# Ejecutar el contenedor en el puerto 8501
+docker run -p 8501:8501 -e GEMINI_API_KEY="tu_clave" huntjob-chile
 ```
 
-## Uso
+---
 
-```bash
-streamlit run app.py
-```
+## 💻 Aplicación de Escritorio (Linux)
 
-`GEMINI_API_KEY` tiene que estar exportada en la sesión de terminal donde corre `streamlit run app.py` (o agregada al `.bashrc`/`.zshrc` para que persista). Sin esa variable, la sección "Generador por URL" falla con un mensaje explícito indicando cómo conseguirla — el buscador de vacantes no depende de ella y sigue funcionando igual.
-
-## App de escritorio (Linux)
-
-Probado en Linux Mint 22 (base Ubuntu/Debian). Abre la app en una ventana
-nativa propia (GTK/WebKit) en vez de una pestaña del navegador, con un
-lanzador en el menú de aplicaciones.
+Para usuarios de Linux Mint / Ubuntu que prefieren ejecutar HuntJob Chile como una aplicación nativa de escritorio:
 
 ```bash
 ./instalar_escritorio.sh
 ```
+Esto creará el acceso directo en el menú de tu sistema con la ventana nativa (GTK/WebKit) y su ícono corporativo.
 
-Esto instala las dependencias del sistema que hagan falta (`python3-gi`,
-GTK, WebKit2 — necesarias para la ventana nativa, no se pueden instalar
-solo con `pip`), ajusta el entorno virtual para que pueda verlas, instala
-`pywebview`, y agrega "HuntJob Chile" al menú de aplicaciones con su
-propio ícono (`assets/icon.png`). Si `GEMINI_API_KEY` no está exportada,
-la app de escritorio la busca automáticamente en `~/.gemini_key`.
+---
 
-También se puede correr directo sin pasar por el menú:
+## 📄 Licencia & Créditos
 
-```bash
-source venv/bin/activate
-python3 desktop.py
-```
-
-Cerrar la ventana (o matar el proceso) termina el servidor de Streamlit
-que corre por detrás — no queda nada corriendo en segundo plano.
-
-## Despliegue web (Streamlit Community Cloud)
-
-Para tener la app accesible por internet mientras se decide qué hacer con
-la app Android/de escritorio a largo plazo. Streamlit Community Cloud es
-gratis y se conecta directo al repo de GitHub:
-
-1. En tu workspace de [share.streamlit.io](https://share.streamlit.io),
-   click en "Create app" y elegí este repo (`alecumsille/huntjob_chile`),
-   archivo principal `app.py`.
-2. Antes de deployar, abrí "Advanced settings" y pegá en el campo
-   "Secrets" (formato TOML) — para una app ya deployada, esto se edita
-   después desde "App settings" → "Secrets":
-   ```toml
-   GEMINI_API_KEY = "tu-key-de-gemini"
-   APP_PASSWORD = "una-clave-que-solo-sepas-vos"
-   ```
-   `APP_PASSWORD` es obligatorio para un despliegue público: sin él, cualquiera
-   que entre al link vería y podría sobreescribir tu perfil (`Mi Perfil` se
-   guarda en un solo archivo compartido en el servidor, no hay separación
-   por usuario todavía — eso es trabajo de una fase futura de multiusuario).
-   Con `APP_PASSWORD` configurado, la app pide esa clave antes de mostrar
-   nada; sin él (como en uso local), no pide clave.
-3. Deploy. Streamlit te da una URL tipo `https://algo.streamlit.app`.
-
-**Sobre el dominio `.me`:** Streamlit Community Cloud no ofrece dominios
-personalizados nativos en el plan gratis (no es como Vercel/Netlify) — no
-pude confirmar una forma soportada de apuntar tu dominio directo a la app
-manteniendo la URL propia en la barra de direcciones. Opciones reales:
-
-- **Redirect simple** desde tu dominio `.me` hacia la URL `.streamlit.app`
-  (se configura en el panel de tu registrador de dominio) — la barra de
-  direcciones va a mostrar la URL de Streamlit después de redirigir, no
-  tu dominio. Rápido de armar, pero no es un dominio "de verdad" para la app.
-- **Self-host en tu droplet de DigitalOcean** (donde ya corren tus otros
-  bots) con Nginx + Let's Encrypt — ahí sí el dominio queda 100% tuyo en
-  la barra de direcciones, pero requiere configurar el servidor a mano
-  (proceso persistente, proxy reverso, certificado HTTPS). Si en algún
-  momento esto se vuelve prioridad, es un paso aparte, no algo que se
-  resuelva solo con Streamlit Community Cloud.
-
-## Portales soportados
-
-| Portal | Método |
-|---|---|
-| Computrabajo Chile | Scraping HTML (`requests` + `BeautifulSoup`) |
-| ChileTrabajos | Scraping HTML (`requests` + `BeautifulSoup`) |
-
-Un portal marca error sin bloquear a los demás: si Computrabajo o ChileTrabajos cambian su estructura o bloquean la búsqueda, el resto sigue funcionando y el error se muestra aparte en la interfaz.
-
-Laborum, Indeed Chile y GetOnBrd se investigaron pero quedaron fuera de esta versión: los tres exigen un navegador real (protección Cloudflare o sesión vía JavaScript) en vez de una simple petición HTTP. Ver `docs/superpowers/specs/2026-07-21-multiportal-design.md` para el detalle técnico de esa decisión.
-
-## Estructura
-
-```
-huntjob_chile/
-├── app.py                          # Interfaz Streamlit
-├── desktop.py                      # Envoltorio de escritorio (ventana nativa GTK/WebKit)
-├── instalar_escritorio.sh          # Instalador del lanzador de escritorio
-├── huntjob-chile.desktop.template  # Plantilla del lanzador (.desktop)
-├── assets/
-│   └── icon.png                    # Ícono de la app de escritorio
-├── core/
-│   ├── scraper_web.py      # Extracción de oferta puntual + búsqueda por portal
-│   ├── portales.py         # Dispatcher multi-portal (registro + búsqueda agregada)
-│   ├── motor_ia.py         # Generación de texto vía Gemini (Google AI)
-│   ├── generador_pdf.py    # Compilación de CV / Cover Letter en PDF
-│   └── perfil.py           # Perfil de usuario (perfil/mi_perfil.yaml, no versionado)
-├── .streamlit/
-│   └── config.toml         # Tema visual base (paleta pastel rosado + celeste)
-└── requirements.txt
-```
-
-La app además rota entre 4 variantes pastel (fondo, sidebar, botón principal) cada hora, vía un CSS mínimo inyectado en `app.py` — el theme de `config.toml` es fijo por proceso, no soporta cambios programados por sí solo.
-
-## Mi Perfil
-
-Tab en la app donde se completa un perfil real (nombre, años de experiencia,
-seniority, stack principal, logros) que se guarda localmente en
-`perfil/mi_perfil.yaml` (no se commitea, es información personal). Por ahora
-solo se usa para firmar la Cover Letter con tu nombre real; las próximas
-fases lo van a usar también para calcular qué tan buen fit es cada oferta
-encontrada y para personalizar mucho más el contenido generado.
-
-## Notas de mantenimiento
-
-El módulo `core/scraper_web.py` depende de selectores CSS actuales de cada portal (`article.box_offer` en Computrabajo, `div.job-item` en ChileTrabajos). Si un sitio cambia su estructura HTML, la búsqueda de ese portal dejará de devolver resultados y la función correspondiente lo señalará explícitamente vía `ErrorScraping` — el punto a revisar es la sección de selectores dentro de esa función.
-
-## Roadmap
-
-**Corto plazo (app personal, en curso):**
-
-- Perfil de usuario editable (tab "Mi Perfil") como base para matching de ofertas contra el perfil real, y para CVs/Cover Letters mucho más personalizados que hoy.
-- Deduplicación de resultados cuando la misma vacante aparece en más de un portal.
-- Asistente conversacional para preguntar sobre las ofertas encontradas o la estrategia de búsqueda.
-- Sumar más portales livianos (sin necesidad de navegador) al diccionario `PORTALES` en `core/portales.py`.
-- Evaluar agregar Playwright como dependencia si en algún momento se justifica soportar portales protegidos por Cloudflare (Laborum, Indeed, GetOnBrd).
-- App para Android: fase separada, sin alcance ni fecha definidos todavía.
-
-**Idea a largo plazo (si algún día se lanza como producto público, no decidido):**
-
-Convertir HuntJob Chile en un sitio multiusuario es un proyecto aparte, no una
-extensión incremental de la app actual — implica hosting público, apps OAuth
-registradas con cada proveedor, base de datos de usuarios, pasarela de pago
-y política de privacidad para datos de terceros. Ideas anotadas para cuando
-(si) se decida encarar eso:
-
-- Registro/login con Google, GitHub, Facebook o email.
-- Recomendación de ofertas a partir de un CV subido por el usuario, sin
-  almacenar ese CV — remarcado como garantía de privacidad en el sitio.
-- Funciones "pro" de pago, posibles candidatas:
-  - Alertas automáticas (diarias/semanales) de ofertas nuevas que matchean el perfil.
-  - Acceso a portales que requieren Playwright (Laborum, Indeed, GetOnBrd).
-  - Historial y tracking de postulaciones (a qué ofertas ya postulaste y en qué estado).
-  - Múltiples perfiles/CVs para postular a distintos tipos de roles.
-  - Generación ilimitada de CVs/Cover Letters vs. un límite mensual en el plan gratis.
-  - Análisis de brecha de habilidades: qué te falta para calzar mejor con las ofertas que te interesan.
+Desarrollado con ❤️ para impulsar el talento en Chile.  
+Sitio Oficial: [https://huntjob.cumsille.me](https://huntjob.cumsille.me)
