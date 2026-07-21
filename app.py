@@ -15,9 +15,15 @@ st.set_page_config(page_title="HuntJob Chile", page_icon="assets/icon.png", layo
 
 
 def _logo_b64() -> str:
-    """Lee el logo y lo devuelve en base64 para embeber en HTML — necesario
-    en Streamlit Cloud donde los archivos estáticos no se sirven directamente."""
+    """Lee el logo y lo devuelve en base64 para embeber en HTML."""
     ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icon.png")
+    with open(ruta, "rb") as f:
+        return base64.b64encode(f.read()).decode()
+
+
+def _chile_b64() -> str:
+    """Lee la bandera chilena y la devuelve en base64."""
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "chile.png")
     with open(ruta, "rb") as f:
         return base64.b64encode(f.read()).decode()
 
@@ -101,6 +107,10 @@ components.html(
         0%, 100% {{ transform: translateY(0px); }}
         50%       {{ transform: translateY(-7px); }}
       }}
+      @keyframes hj-float-flag {{
+        0%, 100% {{ transform: translateY(0px) rotate(-1deg); }}
+        50%       {{ transform: translateY(-5px) rotate(1deg); }}
+      }}
       @keyframes hj-search {{
         0%   {{ transform: translateY(0px) rotate(0deg); }}
         25%  {{ transform: translateY(-5px) rotate(-8deg); }}
@@ -110,8 +120,13 @@ components.html(
       .wrap {{
         display: flex;
         align-items: center;
+        justify-content: space-between;
+        padding: 10px 8px 6px 0;
+      }}
+      .left {{
+        display: flex;
+        align-items: center;
         gap: 18px;
-        padding: 10px 0 6px 0;
       }}
       .logo {{
         width: 72px;
@@ -140,14 +155,25 @@ components.html(
         margin: 4px 0 0 0;
         font-family: 'Nunito', sans-serif;
       }}
+      .flag {{
+        width: 130px;
+        opacity: 0.88;
+        mix-blend-mode: multiply;
+        filter: drop-shadow(0 3px 10px rgba(180,0,0,0.18));
+        animation: hj-float-flag 5s ease-in-out infinite;
+        animation-delay: 0.8s;
+      }}
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@700&family=Nunito:wght@400&display=swap" rel="stylesheet">
     <div class="wrap">
-      <img class="logo" src="data:image/png;base64,{_logo_b64()}" alt="HuntJob Chile">
-      <div>
-        <p class="titulo">HuntJob Chile</p>
-        <p class="caption">Motor de postulaciones &mdash; extrae la oferta, analiza con IA y genera el PDF.</p>
+      <div class="left">
+        <img class="logo" src="data:image/png;base64,{_logo_b64()}" alt="HuntJob Chile">
+        <div>
+          <p class="titulo">HuntJob Chile</p>
+          <p class="caption">Motor de postulaciones &mdash; extrae la oferta, analiza con IA y genera el PDF.</p>
+        </div>
       </div>
+      <img class="flag" src="data:image/png;base64,{_chile_b64()}" alt="Hecho en Chile">
     </div>
     """,
     height=110,
