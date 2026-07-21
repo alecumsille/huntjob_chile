@@ -14,6 +14,24 @@ from core.db import guardar_historial, obtener_historial_reciente
 
 st.set_page_config(page_title="HuntJob Chile", page_icon="assets/icon.png", layout="wide")
 
+# Meta tags Open Graph / Twitter Card para vista previa con imagen al compartir el link
+st.markdown(
+    """
+    <head>
+        <meta property="og:title" content="HuntJob Chile — Plataforma Inteligente de Empleos">
+        <meta property="og:description" content="Busca ofertas en todos los portales de empleo de Chile y crea tu CV adaptado con IA.">
+        <meta property="og:image" content="https://raw.githubusercontent.com/alecumsille/huntjob_chile/main/assets/icon.png">
+        <meta property="og:url" content="https://huntjob.cumsille.me">
+        <meta property="og:type" content="website">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="HuntJob Chile">
+        <meta name="twitter:description" content="Plataforma Inteligente de Empleos en Chile y creador de CVs optimizados con IA.">
+        <meta name="twitter:image" content="https://raw.githubusercontent.com/alecumsille/huntjob_chile/main/assets/icon.png">
+    </head>
+    """,
+    unsafe_allow_html=True
+)
+
 
 def _logo_b64() -> str:
     """Lee el logo y lo devuelve en base64 para embeber en HTML."""
