@@ -152,3 +152,83 @@ def analizar_match(texto_oferta: str, perfil: dict) -> dict:
         return {"score": int(resultado["score"]), "explicacion": str(resultado["explicacion"])}
     except (ValueError, TypeError):
         raise ErrorIA(f"El score de Gemini no es un número válido: {resultado}")
+
+
+def sugerir_respuesta(pregunta: str, perfil: dict, opciones: list[str] | None = None) -> dict:
+    """
+    Sugiere una respuesta para una pregunta de formulario de postulación,
+    basada en el perfil del usuario. Si se dan opciones (pregunta de
+    opción múltiple), la respuesta queda restringida por schema a ser
+    textualmente una de esas opciones — Gemini nunca puede inventar una
+    alternativa que no esté en la lista. Lanza ErrorIA con el detalle
+    exacto si algo falla.
+    """
+    api_key = _obtener_api_key()
+
+    contexto_perfil = (
+        f"Años de experiencia: {perfil.get('anos_experiencia', 0)}\n"
+        f"Nivel: {perfil.get('seniority', '')}\n"
+        f"Stack principal: {perfil.get('stack_principal', '')}\n"
+        f"Logros y experiencia: {perfil.get('logros_y_experiencia', '')}"
+    )
+
+    propiedad_respuesta = {"type": "STRING"}
+    instruccion_opciones = ""
+    if opciones:
+        propiedad_respuesta["enum"] = opciones
+        instruccion_opciones = (
+            f" Debes elegir EXACTAMENTE una de estas alternativas, tal como están "
+            f"escritas: {', '.join(opciones)}."
+        )
+
+    prompt = (
+        "Sos un candidato respondiendo una pregunta de un formulario de postulación "
+        "laboral, usando tu perfil real como base. Da una respuesta corta y directa, "
+        f"lista para copiar en el formulario, y una justificación breve (1 a 2 "
+        f"líneas).{instruccion_opciones}\n\n"
+        f"Perfil del candidato:\n{contexto_perfil}\n\n"
+        f"Pregunta del formulario:\n{pregunta}"
+    )
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "responseSchema": {
+                "type": "OBJECT",
+                "properties": {
+                    "respuesta": propiedad_respuesta,
+                    "justificacion": {"type": "STRING"},
+                },
+                "required": ["respuesta", "justificacion"],
+            },
+        },
+    }
+    url = URL_API.format(modelo=MODELO)
+
+    try:
+        respuesta_http = requests.post(
+            url, params={"key": api_key}, json=payload, timeout=TIMEOUT_SEGUNDOS
+        )
+    except requests.exceptions.Timeout:
+        raise ErrorIA(f"Gemini no respondió en {TIMEOUT_SEGUNDOS}s.")
+    except requests.exceptions.ConnectionError as e:
+        raise ErrorIA(f"Se perdió la conexión con Gemini: {e}")
+
+    if respuesta_http.status_code != 200:
+        raise ErrorIA(f"Gemini devolvió código {respuesta_http.status_code}: {respuesta_http.text[:200]}")
+
+    cuerpo = respuesta_http.json()
+    try:
+        texto_generado = cuerpo["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError):
+        raise ErrorIA(f"Gemini respondió sin contenido generado: {cuerpo}")
+
+    try:
+        resultado = json.loads(texto_generado)
+    except json.JSONDecodeError:
+        raise ErrorIA(f"Gemini no devolvió JSON válido: {texto_generado[:200]}")
+
+    if "respuesta" not in resultado or "justificacion" not in resultado:
+        raise ErrorIA(f"La respuesta de Gemini no trae respuesta/justificacion: {resultado}")
+
+    return {"respuesta": str(resultado["respuesta"]), "justificacion": str(resultado["justificacion"])}
