@@ -14,22 +14,51 @@ from core.db import guardar_historial, obtener_historial_reciente
 
 st.set_page_config(page_title="HuntJob Chile", page_icon="assets/icon.png", layout="wide")
 
-# Meta tags Open Graph / Twitter Card para vista previa con imagen al compartir el link
-st.markdown(
+# Inyección de metadatos Open Graph directo al <head> nativo del DOM
+components.html(
     """
-    <head>
-        <meta property="og:title" content="HuntJob Chile — Plataforma Inteligente de Empleos">
-        <meta property="og:description" content="Busca ofertas en todos los portales de empleo de Chile y crea tu CV adaptado con IA.">
-        <meta property="og:image" content="https://raw.githubusercontent.com/alecumsille/huntjob_chile/main/assets/icon.png">
-        <meta property="og:url" content="https://huntjob.cumsille.me">
-        <meta property="og:type" content="website">
-        <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="HuntJob Chile">
-        <meta name="twitter:description" content="Plataforma Inteligente de Empleos en Chile y creador de CVs optimizados con IA.">
-        <meta name="twitter:image" content="https://raw.githubusercontent.com/alecumsille/huntjob_chile/main/assets/icon.png">
-    </head>
+    <script>
+    const parentHead = window.parent.document.getElementsByTagName('head')[0];
+    
+    // Meta OG Image
+    let metaOgImg = window.parent.document.querySelector("meta[property='og:image']");
+    if (!metaOgImg) {
+        metaOgImg = window.parent.document.createElement('meta');
+        metaOgImg.setAttribute('property', 'og:image');
+        parentHead.appendChild(metaOgImg);
+    }
+    metaOgImg.setAttribute('content', 'https://raw.githubusercontent.com/alecumsille/huntjob_chile/main/assets/icon.png');
+
+    // Meta OG Title
+    let metaOgTitle = window.parent.document.querySelector("meta[property='og:title']");
+    if (!metaOgTitle) {
+        metaOgTitle = window.parent.document.createElement('meta');
+        metaOgTitle.setAttribute('property', 'og:title');
+        parentHead.appendChild(metaOgTitle);
+    }
+    metaOgTitle.setAttribute('content', 'HuntJob Chile — Plataforma Inteligente de Empleos');
+
+    // Meta OG Description
+    let metaOgDesc = window.parent.document.querySelector("meta[property='og:description']");
+    if (!metaOgDesc) {
+        metaOgDesc = window.parent.document.createElement('meta');
+        metaOgDesc.setAttribute('property', 'og:description');
+        parentHead.appendChild(metaOgDesc);
+    }
+    metaOgDesc.setAttribute('content', 'Busca ofertas en todos los portales de empleo de Chile y genera tu CV optimizado con IA.');
+
+    // Favicon link
+    let favicon = window.parent.document.querySelector("link[rel*='icon']");
+    if (!favicon) {
+        favicon = window.parent.document.createElement('link');
+        favicon.type = 'image/png';
+        favicon.rel = 'shortcut icon';
+        parentHead.appendChild(favicon);
+    }
+    favicon.href = 'https://raw.githubusercontent.com/alecumsille/huntjob_chile/main/assets/icon.png';
+    </script>
     """,
-    unsafe_allow_html=True
+    height=0,
 )
 
 
