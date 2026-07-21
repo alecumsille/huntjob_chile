@@ -178,8 +178,11 @@ if seccion == "Generador por URL":
                         f"para el puesto de {puesto_objetivo} en {mercado_destino}. Si el perfil de abajo "
                         f"tiene logros o experiencia cargada, mencioná como máximo uno concreto que calce "
                         f"con esta oferta puntual, en vez de lenguaje genérico de relleno — si no hay logros "
-                        f"cargados, escribí sin inventar ninguno. Firma con el nombre {nombre_firma}. No "
-                        f"agregues explicaciones, análisis, ni ningún texto que no sea la carta en sí.\n\n"
+                        f"cargados, escribí sin inventar ninguno. NUNCA digas que el candidato domina o usa "
+                        f"una tecnología que no esté textualmente en su 'Stack principal' de abajo, aunque la "
+                        f"oferta la pida — en ese caso, podés mencionar disposición a aprenderla, nunca "
+                        f"dominio que no tiene. Firma con el nombre {nombre_firma}. No agregues explicaciones, "
+                        f"análisis, ni ningún texto que no sea la carta en sí.\n\n"
                         f"Perfil del candidato:\n{contexto_perfil}"
                     )
 
