@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 salidas_pdf/
 venv/
+perfil/
