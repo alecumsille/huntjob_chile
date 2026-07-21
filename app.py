@@ -1,3 +1,4 @@
+import base64
 import os
 from datetime import datetime
 
@@ -10,6 +11,14 @@ from core.portales import PORTALES, buscar_en_todos
 from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY, formatear_perfil
 
 st.set_page_config(page_title="HuntJob Chile", page_icon="assets/icon.png", layout="wide")
+
+
+def _logo_b64() -> str:
+    """Lee el logo y lo devuelve en base64 para embeber en HTML — necesario
+    en Streamlit Cloud donde los archivos estáticos no se sirven directamente."""
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icon.png")
+    with open(ruta, "rb") as f:
+        return base64.b64encode(f.read()).decode()
 
 
 def _clave_configurada() -> str:
@@ -72,13 +81,67 @@ st.markdown(
     [data-testid="stSidebar"] [role="radiogroup"] label div:first-child {{
         border-color: {paleta_actual['sidebar_primario']} !important;
     }}
+
+    /* --- Logo animado --- */
+    @keyframes hj-float {{
+        0%, 100% {{ transform: translateY(0px); }}
+        50%        {{ transform: translateY(-7px); }}
+    }}
+    @keyframes hj-search {{
+        0%   {{ transform: translateY(0px) rotate(0deg); }}
+        25%  {{ transform: translateY(-5px) rotate(-8deg); }}
+        75%  {{ transform: translateY(-5px) rotate(8deg); }}
+        100% {{ transform: translateY(0px) rotate(0deg); }}
+    }}
+    .hj-logo-wrap {{
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        margin-bottom: 2px;
+        margin-top: 8px;
+    }}
+    .hj-logo {{
+        width: 72px;
+        height: 72px;
+        animation: hj-float 3.6s ease-in-out infinite;
+        filter: drop-shadow(0 4px 10px rgba(200,127,160,0.25));
+        cursor: default;
+        transition: filter 0.3s ease;
+    }}
+    .hj-logo:hover {{
+        animation: hj-search 1.2s ease-in-out infinite;
+        filter: drop-shadow(0 6px 18px rgba(200,127,160,0.50));
+    }}
+    .hj-titulo {{
+        font-size: 2.4rem;
+        font-weight: 700;
+        color: {paleta_actual['primario']};
+        margin: 0;
+        line-height: 1.1;
+        letter-spacing: -0.5px;
+    }}
+    .hj-caption {{
+        font-size: 0.92rem;
+        color: #888;
+        margin: 4px 0 0 0;
+    }}
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-st.title("HuntJob Chile")
-st.caption("Motor de postulaciones: extracción de oferta, análisis con IA (Gemini) y generación de PDF.")
+st.markdown(
+    f"""
+    <div class="hj-logo-wrap">
+        <img class="hj-logo" src="data:image/png;base64,{_logo_b64()}" alt="HuntJob Chile logo">
+        <div>
+            <p class="hj-titulo">HuntJob Chile</p>
+            <p class="hj-caption">Motor de postulaciones &mdash; extrae la oferta, analiza con IA y genera el PDF.</p>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 CARPETA_SALIDA = "salidas_pdf"
 os.makedirs(CARPETA_SALIDA, exist_ok=True)
