@@ -185,3 +185,51 @@ def buscar_chiletrabajos(palabra_clave: str, cantidad_paginas: int = 1) -> list[
             })
 
     return resultados
+
+
+def buscar_getonbrd(palabra_clave: str, cantidad_paginas: int = 1) -> list[dict]:
+    """
+    Busca empleos en Getonbrd usando su API pública REST oficial (libre de bloqueos WAF).
+    Devuelve lista de dicts compatibles con el dispatcher.
+    """
+    resultados = []
+    palabra_clave_lower = palabra_clave.lower().strip()
+
+    for pagina in range(1, cantidad_paginas + 1):
+        url_api = f"https://www.getonbrd.com/api/v0/search/jobs?query={palabra_clave}&page={pagina}&per_page=20"
+
+        try:
+            respuesta = requests.get(url_api, headers=HEADERS, timeout=TIMEOUT_SEGUNDOS)
+        except requests.exceptions.RequestException as e:
+            raise ErrorScraping(f"Fallo de red buscando en Getonbrd (página {pagina}): {e}")
+
+        if respuesta.status_code != 200:
+            raise ErrorScraping(f"Getonbrd respondió HTTP {respuesta.status_code} en la página {pagina}.")
+
+        cuerpo = respuesta.json()
+        datos = cuerpo.get("data", [])
+        if not datos:
+            break
+
+        for item in datos:
+            attr = item.get("attributes", {})
+            titulo = attr.get("title", "")
+            
+            # Filtro adicional por palabra clave en título si aplica
+            company_data = attr.get("company", {}).get("data", {}).get("attributes", {})
+            empresa = company_data.get("name", "No especificada")
+            modalidad = "Remoto" if attr.get("remote") else "Presencial/Híbrido"
+            ubicacion = attr.get("country", "Chile")
+            link = attr.get("url", "")
+
+            resultados.append({
+                "titulo": titulo,
+                "empresa": empresa,
+                "ubicacion": ubicacion,
+                "modalidad": modalidad,
+                "publicado": "",
+                "link": link,
+            })
+
+    return resultados
+

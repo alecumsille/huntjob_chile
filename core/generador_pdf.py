@@ -18,6 +18,13 @@ COLOR_SUBTITULO = "#5B9BD5"
 COLOR_CUERPO = "#333333"
 COLOR_CONTACTO = "#777777"
 
+PLANTILLAS_ESTILO = {
+    "Pastel": {"nombre": "#C87FA0", "subtitulo": "#5B9BD5", "linea": "#5B9BD5"},
+    "Ejecutivo / Marino": {"nombre": "#1B365D", "subtitulo": "#005691", "linea": "#005691"},
+    "Minimalista Oscuro": {"nombre": "#222222", "subtitulo": "#444444", "linea": "#666666"},
+    "Esmeralda / Tech": {"nombre": "#0F5132", "subtitulo": "#198754", "linea": "#198754"},
+}
+
 
 def sanear_nombre_archivo(texto: str) -> str:
     """
@@ -43,7 +50,7 @@ def _limpiar_markdown(linea: str) -> str:
     return limpia
 
 
-def generar_pdf(ruta_salida: str, contenido_texto: str, tipo_documento: str, puesto: str, perfil: dict) -> None:
+def generar_pdf(ruta_salida: str, contenido_texto: str, tipo_documento: str, puesto: str, perfil: dict, estilo_nombre: str = "Pastel") -> None:
     """
     Compila un PDF con encabezado real (nombre, contacto, tipo de
     documento + puesto) y cuerpo en párrafos separados. Diseño simple de
@@ -65,12 +72,14 @@ def generar_pdf(ruta_salida: str, contenido_texto: str, tipo_documento: str, pue
     )
     estilos = getSampleStyleSheet()
 
-    estilo_nombre = ParagraphStyle(
+    paleta_pdf = PLANTILLAS_ESTILO.get(estilo_nombre, PLANTILLAS_ESTILO["Pastel"])
+
+    estilo_nombre_p = ParagraphStyle(
         "NombreCandidato",
         parent=estilos["Heading1"],
         fontSize=22,
         spaceAfter=2,
-        textColor=COLOR_NOMBRE,
+        textColor=paleta_pdf["nombre"],
     )
     estilo_contacto = ParagraphStyle(
         "Contacto",
@@ -85,7 +94,7 @@ def generar_pdf(ruta_salida: str, contenido_texto: str, tipo_documento: str, pue
         fontSize=13,
         spaceBefore=10,
         spaceAfter=12,
-        textColor=COLOR_SUBTITULO,
+        textColor=paleta_pdf["subtitulo"],
     )
     estilo_cuerpo = ParagraphStyle(
         "CuerpoDocumento",
@@ -102,13 +111,13 @@ def generar_pdf(ruta_salida: str, contenido_texto: str, tipo_documento: str, pue
         dato for dato in (perfil.get("email"), perfil.get("telefono"), perfil.get("linkedin")) if dato
     ]
 
-    elementos = [Paragraph(escape(nombre), estilo_nombre)]
+    elementos = [Paragraph(escape(nombre), estilo_nombre_p)]
     if datos_contacto:
         elementos.append(Paragraph(escape("  ·  ".join(datos_contacto)), estilo_contacto))
     else:
         elementos.append(Spacer(1, 6))
 
-    elementos.append(HRFlowable(width="100%", thickness=1, color=COLOR_SUBTITULO, spaceAfter=4))
+    elementos.append(HRFlowable(width="100%", thickness=1, color=paleta_pdf["linea"], spaceAfter=4))
     elementos.append(Paragraph(escape(f"{tipo_documento} — {puesto}"), estilo_subtitulo))
 
     for linea in contenido_texto.split("\n"):

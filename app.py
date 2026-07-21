@@ -258,9 +258,15 @@ if seccion == "Generador por URL":
             "Puesto detectado (editable)",
             value=st.session_state.puesto_detectado,
         )
-        mercado_destino = st.selectbox(
-            "Mercado objetivo", ["Chile", "Alemania / Europa", "UK", "USA", "Remoto Global"]
-        )
+        col_mercado, col_estilo = st.columns(2)
+        with col_mercado:
+            mercado_destino = st.selectbox(
+                "Mercado objetivo", ["Chile", "Alemania / Europa", "UK", "USA", "Remoto Global"]
+            )
+        with col_estilo:
+            estilo_pdf = st.selectbox(
+                "Estilo visual del PDF", ["Pastel", "Ejecutivo / Marino", "Minimalista Oscuro", "Esmeralda / Tech"]
+            )
 
         if st.button("Generar CV y Cover Letter", icon=":material/description:", type="primary"):
             if not st.session_state.texto_extraido:
@@ -310,8 +316,8 @@ if seccion == "Generador por URL":
             ruta_cl = os.path.join(CARPETA_SALIDA, f"CoverLetter_{nombre_archivo}_{cargo_limpio}.pdf")
 
             try:
-                generar_pdf(ruta_cv, cv_adaptado, "CV", puesto_objetivo, perfil)
-                generar_pdf(ruta_cl, cover_letter_adaptada, "Cover Letter", puesto_objetivo, perfil)
+                generar_pdf(ruta_cv, cv_adaptado, "CV", puesto_objetivo, perfil, estilo_nombre=estilo_pdf)
+                generar_pdf(ruta_cl, cover_letter_adaptada, "Cover Letter", puesto_objetivo, perfil, estilo_nombre=estilo_pdf)
             except ValueError as e:
                 st.error(f"Error al generar el PDF: {e}", icon=":material/error:")
                 st.stop()

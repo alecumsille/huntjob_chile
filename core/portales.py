@@ -7,6 +7,7 @@ nunca tumba el batch completo).
 from core.scraper_web import (
     buscar_computrabajo,
     buscar_chiletrabajos,
+    buscar_getonbrd,
     ErrorScraping,
 )
 
@@ -20,6 +21,11 @@ PORTALES = {
         "nombre": "ChileTrabajos",
         "url": "https://www.chiletrabajos.cl",
         "funcion": buscar_chiletrabajos,
+    },
+    "getonbrd": {
+        "nombre": "Get on Board",
+        "url": "https://www.getonbrd.com",
+        "funcion": buscar_getonbrd,
     },
 }
 
