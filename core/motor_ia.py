@@ -148,4 +148,7 @@ def analizar_match(texto_oferta: str, perfil: dict) -> dict:
     if "score" not in resultado or "explicacion" not in resultado:
         raise ErrorIA(f"La respuesta de Gemini no trae score/explicacion: {resultado}")
 
-    return {"score": int(resultado["score"]), "explicacion": str(resultado["explicacion"])}
+    try:
+        return {"score": int(resultado["score"]), "explicacion": str(resultado["explicacion"])}
+    except (ValueError, TypeError):
+        raise ErrorIA(f"El score de Gemini no es un número válido: {resultado}")
