@@ -6,6 +6,8 @@ propaga la excepción con contexto claro (no se retorna una lista vacía
 disfrazada de "sin resultados").
 """
 
+from datetime import datetime
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -189,11 +191,18 @@ def buscar_chiletrabajos(palabra_clave: str, cantidad_paginas: int = 1) -> list[
 
 def buscar_getonbrd(palabra_clave: str, cantidad_paginas: int = 1) -> list[dict]:
     """
-    Busca empleos en Getonbrd usando su API pública REST oficial (libre de bloqueos WAF).
+    Busca empleos en Getonbrd usando su API pública REST oficial (libre de
+    bloqueos WAF/Cloudflare que sí afectan al scraping directo del HTML).
     Devuelve lista de dicts compatibles con el dispatcher.
+
+    IMPORTANTE — limitación real de este endpoint: "company" en attributes
+    es solo una referencia JSON:API ({"data": {"id": ..., "type": "company"}}),
+    sin nombre embebido. El endpoint de detalle por job (/api/v0/jobs/{id})
+    que sí tendría el nombre completo devuelve 401 sin autenticación —
+    verificado en vivo. "empresa" queda honestamente "No especificada" en
+    vez de inventar un nombre o parsearlo del slug del id.
     """
     resultados = []
-    palabra_clave_lower = palabra_clave.lower().strip()
 
     for pagina in range(1, cantidad_paginas + 1):
         url_api = f"https://www.getonbrd.com/api/v0/search/jobs?query={palabra_clave}&page={pagina}&per_page=20"
@@ -214,20 +223,27 @@ def buscar_getonbrd(palabra_clave: str, cantidad_paginas: int = 1) -> list[dict]
         for item in datos:
             attr = item.get("attributes", {})
             titulo = attr.get("title", "")
-            
-            # Filtro adicional por palabra clave en título si aplica
-            company_data = attr.get("company", {}).get("data", {}).get("attributes", {})
-            empresa = company_data.get("name", "No especificada")
             modalidad = "Remoto" if attr.get("remote") else "Presencial/Híbrido"
-            ubicacion = attr.get("country", "Chile")
-            link = attr.get("url", "")
+
+            paises = attr.get("countries") or []
+            ubicacion = ", ".join(paises) if paises else "No especificada"
+
+            # El link real vive en item["links"]["public_url"], no en
+            # attributes — attr.get("url") siempre devolvía vacío.
+            link = item.get("links", {}).get("public_url", "")
+
+            # published_at es un timestamp Unix.
+            publicado = ""
+            timestamp = attr.get("published_at")
+            if timestamp:
+                publicado = datetime.fromtimestamp(timestamp).strftime("%d-%m-%Y")
 
             resultados.append({
                 "titulo": titulo,
-                "empresa": empresa,
+                "empresa": "No especificada",
                 "ubicacion": ubicacion,
                 "modalidad": modalidad,
-                "publicado": "",
+                "publicado": publicado,
                 "link": link,
             })
 
