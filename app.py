@@ -88,33 +88,76 @@ if not st.session_state.get("autenticado"):
     
     col_a, col_b, col_c = st.columns([1, 2, 1])
     with col_b:
-        st.markdown("### Selecciona tu método de ingreso:")
+        st.markdown(
+            """
+            <style>
+            .btn-social {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 12px;
+                width: 100%;
+                padding: 12px 20px;
+                border-radius: 10px;
+                font-family: 'Quicksand', sans-serif;
+                font-weight: 700;
+                font-size: 1rem;
+                cursor: pointer;
+                border: none;
+                transition: all 0.2s ease;
+                text-decoration: none;
+                margin-bottom: 12px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            }
+            .btn-google {
+                background-color: #FFFFFF;
+                color: #757575;
+                border: 1px solid #DDDDDD;
+            }
+            .btn-google:hover {
+                background-color: #F8F9FA;
+                border-color: #CCCCCE;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            }
+            .btn-github {
+                background-color: #24292E;
+                color: #FFFFFF;
+            }
+            .btn-github:hover {
+                background-color: #1B1F23;
+                box-shadow: 0 4px 15px rgba(36,41,46,0.3);
+            }
+            .btn-facebook {
+                background-color: #1877F2;
+                color: #FFFFFF;
+            }
+            .btn-facebook:hover {
+                background-color: #166FE5;
+                box-shadow: 0 4px 15px rgba(24,119,242,0.3);
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown("<p style='text-align:center; font-family:Nunito; color:#666; font-weight:600;'>Selecciona tu método de ingreso:</p>", unsafe_allow_html=True)
         
-        # SVGs oficiales de Google, GitHub y Facebook
-        SVG_GOOGLE = '<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:middle; margin-right:8px;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>'
-        SVG_GITHUB = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#333" style="vertical-align:middle; margin-right:8px;"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>'
-        SVG_FACEBOOK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2" style="vertical-align:middle; margin-right:8px;"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>'
-
-        btn_g = st.button("Continuar con Google", use_container_width=True)
-        btn_gh = st.button("Continuar con GitHub", use_container_width=True)
-        btn_fb = st.button("Continuar con Facebook", use_container_width=True)
-
-        if btn_g:
+        # Botón Google
+        if st.button("Continuar con Google", key="auth_google", use_container_width=True, type="secondary"):
             st.session_state.autenticado = True
             st.session_state.proveedor_auth = "Google"
-            st.session_state.usuario_nombre = "Usuario Google"
             st.rerun()
             
-        if btn_gh:
+        # Botón GitHub
+        if st.button("Continuar con GitHub", key="auth_github", use_container_width=True, type="primary"):
             st.session_state.autenticado = True
             st.session_state.proveedor_auth = "GitHub"
-            st.session_state.usuario_nombre = "Usuario GitHub"
             st.rerun()
-            
-        if btn_fb:
+
+        # Botón Facebook
+        if st.button("Continuar con Facebook", key="auth_facebook", use_container_width=True):
             st.session_state.autenticado = True
             st.session_state.proveedor_auth = "Facebook"
-            st.session_state.usuario_nombre = "Usuario Facebook"
             st.rerun()
             
         if clave_requerida:
