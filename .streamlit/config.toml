@@ -1,49 +1,50 @@
-# shadcn/ui-inspired Streamlit Theme
-# Beautifully designed components aesthetic
-# Minimal, accessible, elegant with neutral palette
+# HuntJob Chile — tema pastel
+# Rosado (contenido principal, botones) + celeste (sidebar, links, code),
+# ambos como tintes suaves sobre fondo casi blanco.
 
 [theme]
 base = "light"
-primaryColor = "#18181B"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#FAFAFA"
-codeBackgroundColor = "#F4F4F5"
-textColor = "#09090B"
-linkColor = "#18181B"
-borderColor = "#E4E4E7"
+primaryColor = "#C87FA0"
+backgroundColor = "#FFFDFE"
+secondaryBackgroundColor = "#FCEEF3"
+codeBackgroundColor = "#EDF4FB"
+textColor = "#3A3642"
+linkColor = "#5B9BD5"
+borderColor = "#F3D9E3"
 showWidgetBorder = true
 showSidebarBorder = true
-baseRadius = "6px"
-buttonRadius = "6px"
-font = "'Inter':https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+baseRadius = "12px"
+buttonRadius = "12px"
+font = "Nunito:https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap"
+headingFont = "Quicksand:https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap"
 codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
 codeFontSize = "0.875rem"
-codeTextColor = "#18181B"
-baseFontSize = 14
+codeTextColor = "#33394A"
+baseFontSize = 15
 baseFontWeight = 400
-headingFontSizes = ["36px", "30px", "24px", "20px", "16px", "14px"]
+headingFontSizes = ["34px", "28px", "22px", "18px", "16px", "14px"]
 headingFontWeights = [600, 600, 600, 600, 600, 600]
-linkUnderline = true
-chartCategoricalColors = ["#18181B", "#71717A", "#A1A1AA", "#D4D4D8", "#3B82F6", "#EF4444", "#22C55E"]
+linkUnderline = false
+chartCategoricalColors = ["#E8A0BE", "#8FBCE6", "#B39DDB", "#8ED1B0", "#F5B895", "#EAD57C", "#A8C99A"]
 
-# shadcn zinc palette
-grayColor = "#71717A"
-blueColor = "#3B82F6"
-greenColor = "#22C55E"
-redColor = "#EF4444"
-yellowColor = "#EAB308"
-orangeColor = "#F97316"
-violetColor = "#8B5CF6"
+# paleta pastel: rosado + celeste + acentos suaves
+grayColor = "#A39BAE"
+blueColor = "#7FB3E0"
+greenColor = "#7FC9A0"
+redColor = "#E8919B"
+yellowColor = "#EAD57C"
+orangeColor = "#F0B285"
+violetColor = "#B39DDB"
 
-dataframeBorderColor = "#E4E4E7"
-dataframeHeaderBackgroundColor = "#FAFAFA"
+dataframeBorderColor = "#F3D9E3"
+dataframeHeaderBackgroundColor = "#FCEEF3"
 
 [theme.sidebar]
-backgroundColor = "#FAFAFA"
-secondaryBackgroundColor = "#F4F4F5"
-codeBackgroundColor = "#E4E4E7"
-textColor = "#09090B"
-borderColor = "#E4E4E7"
-primaryColor = "#18181B"
-dataframeHeaderBackgroundColor = "#F4F4F5"
-dataframeBorderColor = "#E4E4E7"
+backgroundColor = "#EFF6FC"
+secondaryBackgroundColor = "#E4EFF9"
+codeBackgroundColor = "#E4EFF9"
+textColor = "#3A3642"
+borderColor = "#D6E7F5"
+primaryColor = "#5B9BD5"
+dataframeHeaderBackgroundColor = "#E4EFF9"
+dataframeBorderColor = "#D6E7F5"
