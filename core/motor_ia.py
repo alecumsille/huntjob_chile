@@ -1,78 +1,66 @@
 """
-Módulo de generación de texto vía Ollama local (modelo phi3).
-Sin fallback silencioso entre modelos: si phi3 no responde, se lanza
-una excepción clara indicando la causa real (servicio caído, modelo
-no instalado, timeout), en vez de probar modelos al azar.
+Módulo de generación de texto vía Gemini (Google AI). Sin fallback
+silencioso entre modelos: si la API falla, se lanza una excepción clara
+indicando la causa real (key faltante, error de la API, timeout), en vez
+de devolver texto simulado.
 """
 
+import os
 import requests
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODELO = "phi3"
-TIMEOUT_SEGUNDOS = 90
+URL_API = "https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent"
+MODELO = "gemini-3.1-flash-lite"
+TIMEOUT_SEGUNDOS = 30
 LIMITE_CARACTERES_CONTEXTO = 4000
 
 
-class ErrorOllama(Exception):
-    """Excepción específica para fallos de la capa de generación local."""
+class ErrorIA(Exception):
+    """Excepción específica para fallos de la capa de generación de texto."""
     pass
 
 
-def verificar_ollama_activo() -> None:
-    """
-    Verifica que el servicio Ollama esté corriendo antes de intentar
-    generar texto. Lanza ErrorOllama con instrucciones concretas si no.
-    """
-    try:
-        respuesta = requests.get("http://localhost:11434/api/tags", timeout=3)
-    except requests.exceptions.ConnectionError:
-        raise ErrorOllama(
-            "Ollama no está corriendo en localhost:11434. "
-            "Ejecuta 'ollama serve' en una terminal aparte."
+def _obtener_api_key() -> str:
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        raise ErrorIA(
+            "Falta la variable de entorno GEMINI_API_KEY. "
+            "Consigue una key gratis en https://aistudio.google.com/apikey "
+            "y expórtala antes de correr la app: export GEMINI_API_KEY=tu-key"
         )
-
-    if respuesta.status_code != 200:
-        raise ErrorOllama(f"Ollama respondió con estado inesperado: {respuesta.status_code}")
-
-    modelos_instalados = [m["name"] for m in respuesta.json().get("models", [])]
-    if not any(MODELO in nombre for nombre in modelos_instalados):
-        raise ErrorOllama(
-            f"El modelo '{MODELO}' no aparece instalado. "
-            f"Modelos disponibles: {modelos_instalados or 'ninguno'}. "
-            f"Ejecuta 'ollama pull {MODELO}'."
-        )
+    return api_key
 
 
 def generar_texto(prompt_sistema: str, texto_base: str) -> str:
     """
-    Envía un prompt a Ollama (modelo phi3) y devuelve la respuesta generada.
-    Lanza ErrorOllama con el detalle exacto si algo falla — no hay
-    reintento silencioso con otros modelos.
+    Envía un prompt a Gemini y devuelve la respuesta generada. Lanza
+    ErrorIA con el detalle exacto si algo falla — no hay reintento
+    silencioso con otros modelos.
     """
-    verificar_ollama_activo()
+    api_key = _obtener_api_key()
 
     prompt_completo = f"{prompt_sistema}\n\nTexto de referencia:\n{texto_base[:LIMITE_CARACTERES_CONTEXTO]}"
-
-    payload = {
-        "model": MODELO,
-        "prompt": prompt_completo,
-        "stream": False,
-    }
+    payload = {"contents": [{"parts": [{"text": prompt_completo}]}]}
+    url = URL_API.format(modelo=MODELO)
 
     try:
-        respuesta = requests.post(OLLAMA_URL, json=payload, timeout=TIMEOUT_SEGUNDOS)
+        respuesta = requests.post(
+            url, params={"key": api_key}, json=payload, timeout=TIMEOUT_SEGUNDOS
+        )
     except requests.exceptions.Timeout:
-        raise ErrorOllama(f"Ollama no respondió en {TIMEOUT_SEGUNDOS}s. El modelo puede estar sobrecargado.")
-    except requests.exceptions.ConnectionError:
-        raise ErrorOllama("Se perdió la conexión con Ollama durante la generación.")
+        raise ErrorIA(f"Gemini no respondió en {TIMEOUT_SEGUNDOS}s.")
+    except requests.exceptions.ConnectionError as e:
+        raise ErrorIA(f"Se perdió la conexión con Gemini: {e}")
 
     if respuesta.status_code != 200:
-        raise ErrorOllama(f"Ollama devolvió código {respuesta.status_code}: {respuesta.text[:200]}")
+        raise ErrorIA(f"Gemini devolvió código {respuesta.status_code}: {respuesta.text[:200]}")
 
     cuerpo = respuesta.json()
-    texto_generado = cuerpo.get("response", "").strip()
+    try:
+        texto_generado = cuerpo["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except (KeyError, IndexError):
+        raise ErrorIA(f"Gemini respondió sin contenido generado: {cuerpo}")
 
     if not texto_generado:
-        raise ErrorOllama("Ollama respondió con texto vacío. Revisa el prompt o el estado del modelo.")
+        raise ErrorIA("Gemini respondió con texto vacío. Revisa el prompt.")
 
     return texto_generado

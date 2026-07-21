@@ -1,19 +1,20 @@
 import os
 import streamlit as st
 
-from core.scraper_web import extraer_texto_url, buscar_ofertas_computrabajo, ErrorScraping
-from core.motor_ia import generar_texto, ErrorOllama
+from core.scraper_web import extraer_texto_url, ErrorScraping
+from core.motor_ia import generar_texto, ErrorIA
 from core.generador_pdf import generar_pdf, sanear_nombre_archivo
+from core.portales import PORTALES, buscar_en_todos
 
 st.set_page_config(page_title="HuntJob Chile", layout="wide")
 
 st.title("HuntJob Chile")
-st.caption("Motor de postulaciones: extracción de oferta, análisis con IA local (Ollama / phi3) y generación de PDF.")
+st.caption("Motor de postulaciones: extracción de oferta, análisis con IA (Gemini) y generación de PDF.")
 
 CARPETA_SALIDA = "salidas_pdf"
 os.makedirs(CARPETA_SALIDA, exist_ok=True)
 
-seccion = st.sidebar.radio("Panel", ["Generador por URL", "Buscador Computrabajo"])
+seccion = st.sidebar.radio("Panel", ["Generador por URL", "Buscador de Vacantes"])
 
 # -------------------------------------------------------------
 # SECCIÓN 1: GENERADOR DIRECTO POR URL
@@ -36,7 +37,7 @@ if seccion == "Generador por URL":
                 st.error(f"No se pudo leer la oferta: {e}")
                 st.stop()
 
-        with st.spinner("Detectando cargo con phi3..."):
+        with st.spinner("Detectando cargo con Gemini..."):
             try:
                 prompt_detectar_cargo = (
                     "Extrae únicamente el título exacto del puesto de trabajo de la siguiente oferta. "
@@ -45,8 +46,8 @@ if seccion == "Generador por URL":
                 st.session_state.puesto_detectado = generar_texto(
                     prompt_detectar_cargo, st.session_state.texto_extraido
                 )
-            except ErrorOllama as e:
-                st.error(f"Fallo en la capa de IA local: {e}")
+            except ErrorIA as e:
+                st.error(f"Fallo en la capa de IA: {e}")
                 st.stop()
 
     puesto_objetivo = st.text_input(
@@ -65,7 +66,7 @@ if seccion == "Generador por URL":
             st.error("El campo de puesto objetivo no puede estar vacío.")
             st.stop()
 
-        with st.spinner("Redactando documentos con phi3..."):
+        with st.spinner("Redactando documentos con Gemini..."):
             try:
                 prompt_cv = (
                     f"Actúa como experto en ingeniería de software. Analiza la oferta para {puesto_objetivo} "
@@ -79,7 +80,7 @@ if seccion == "Generador por URL":
 
                 cv_adaptado = generar_texto(prompt_cv, st.session_state.texto_extraido)
                 cover_letter_adaptada = generar_texto(prompt_cover, st.session_state.texto_extraido)
-            except ErrorOllama as e:
+            except ErrorIA as e:
                 st.error(f"Fallo generando el contenido: {e}")
                 st.stop()
 
@@ -115,29 +116,47 @@ if seccion == "Generador por URL":
                 )
 
 # -------------------------------------------------------------
-# SECCIÓN 2: BUSCADOR REAL EN COMPUTRABAJO
+# SECCIÓN 2: BUSCADOR MULTI-PORTAL DE VACANTES REALES
 # -------------------------------------------------------------
-elif seccion == "Buscador Computrabajo":
-    st.subheader("Búsqueda de vacantes reales en Computrabajo Chile")
+elif seccion == "Buscador de Vacantes":
+    st.subheader("Búsqueda de vacantes reales")
 
-    palabra_clave = st.text_input("Palabra clave (ej: Python Developer, Backend):", value="Python")
-    cantidad_paginas = st.slider("Páginas a recorrer:", min_value=1, max_value=5, value=1)
+    columna_filtros, columna_resultados = st.columns([1, 3])
 
-    if st.button("Buscar ofertas"):
-        with st.spinner(f"Consultando Computrabajo para '{palabra_clave}'..."):
-            try:
-                resultados = buscar_ofertas_computrabajo(palabra_clave, cantidad_paginas)
-            except ErrorScraping as e:
-                st.error(f"Fallo en la búsqueda: {e}")
+    with columna_filtros:
+        palabra_clave = st.text_input("Palabra clave:", value="Python")
+        cantidad_paginas = st.slider("Páginas a recorrer:", min_value=1, max_value=5, value=1)
+        st.caption("Portales:")
+        portales_marcados = [
+            portal_id
+            for portal_id, portal in PORTALES.items()
+            if st.checkbox(portal["nombre"], value=True, key=f"portal_{portal_id}")
+        ]
+
+    with columna_resultados:
+        if st.button("Buscar ofertas"):
+            if not portales_marcados:
+                st.error("Marca al menos un portal para buscar.")
                 st.stop()
 
-        if not resultados:
-            st.warning("No se encontraron ofertas para esa palabra clave.")
-        else:
-            st.success(f"Se encontraron {len(resultados)} vacantes.")
-            for oferta in resultados:
-                st.markdown(f"### {oferta['titulo']}")
-                st.write(f"Empresa: {oferta['empresa']} | Ubicación: {oferta['ubicacion']}")
-                if oferta["link"]:
-                    st.markdown(f"[Ver oferta]({oferta['link']})")
-                st.markdown("---")
+            with st.spinner(f"Consultando {len(portales_marcados)} portal(es) para '{palabra_clave}'..."):
+                resultados, errores = buscar_en_todos(palabra_clave, cantidad_paginas, portales_marcados)
+
+            for error in errores:
+                st.warning(f"No se pudo buscar en {error}")
+
+            if not resultados:
+                st.info("No se encontraron ofertas para esa palabra clave en los portales seleccionados.")
+            else:
+                st.success(f"Se encontraron {len(resultados)} vacantes.")
+                for oferta in resultados:
+                    st.markdown(f"### {oferta['titulo']}")
+                    detalle = f"Fuente: {oferta['fuente']} | Empresa: {oferta['empresa']} | Ubicación: {oferta['ubicacion']}"
+                    if oferta.get("modalidad"):
+                        detalle += f" | {oferta['modalidad']}"
+                    if oferta.get("publicado"):
+                        detalle += f" | Publicado: {oferta['publicado']}"
+                    st.write(detalle)
+                    if oferta["link"]:
+                        st.markdown(f"[Ver oferta]({oferta['link']})")
+                    st.markdown("---")

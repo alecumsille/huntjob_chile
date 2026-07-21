@@ -51,10 +51,11 @@ def extraer_texto_url(url: str) -> str:
     return texto
 
 
-def buscar_ofertas_computrabajo(palabra_clave: str, cantidad_paginas: int = 1) -> list[dict]:
+def buscar_computrabajo(palabra_clave: str, cantidad_paginas: int = 1) -> list[dict]:
     """
     Busca ofertas reales en Computrabajo Chile para la palabra clave dada.
-    Devuelve una lista de dicts: {titulo, empresa, ubicacion, link}.
+    Devuelve una lista de dicts: {titulo, empresa, ubicacion, modalidad,
+    publicado, link}.
 
     IMPORTANTE: Computrabajo cambia su HTML con frecuencia. Si esta función
     empieza a devolver listas vacías de golpe, lo primero es inspeccionar
@@ -90,8 +91,13 @@ def buscar_ofertas_computrabajo(palabra_clave: str, cantidad_paginas: int = 1) -
 
         for tarjeta in tarjetas:
             elemento_titulo = tarjeta.select_one("h2 a")
-            elemento_empresa = tarjeta.select_one("p.dFlex a, span.fs16")
-            elemento_ubicacion = tarjeta.select_one("p.fs13, span.fs13")
+            elemento_empresa = tarjeta.select_one("p.dFlex a")
+            # La ubicación real vive en un p.fs16 sin link (el que sí tiene
+            # link de empresa es el de arriba). No confundir con p.fs13,
+            # que es el tiempo relativo de publicación ("Hace X minutos").
+            elemento_ubicacion = tarjeta.select_one("p.fs16 span.mr10")
+            elemento_publicado = tarjeta.select_one("p.fs13.fc_aux")
+            es_remoto = tarjeta.select_one("div.fs13 .i_home") is not None
 
             if elemento_titulo is None:
                 # Tarjeta con estructura inesperada: se salta, pero no rompe todo el batch.
@@ -106,7 +112,72 @@ def buscar_ofertas_computrabajo(palabra_clave: str, cantidad_paginas: int = 1) -
                 "titulo": titulo,
                 "empresa": elemento_empresa.get_text(strip=True) if elemento_empresa else "No especificada",
                 "ubicacion": elemento_ubicacion.get_text(strip=True) if elemento_ubicacion else "No especificada",
+                "modalidad": "Remoto" if es_remoto else "",
+                "publicado": elemento_publicado.get_text(strip=True) if elemento_publicado else "",
                 "link": link,
+            })
+
+    return resultados
+
+
+def buscar_chiletrabajos(palabra_clave: str, cantidad_paginas: int = 1) -> list[dict]:
+    """
+    Busca ofertas reales en ChileTrabajos para la palabra clave dada.
+
+    El formulario de búsqueda del sitio usa nombres de campo numéricos
+    heredados ("2" para la palabra clave, "f"="2" fijo) en vez de nombres
+    descriptivos — no es un placeholder, se verificó en vivo contra el
+    HTML real del formulario en /encuentra-un-empleo.
+    """
+    resultados = []
+    TAMANO_PAGINA = 30
+
+    for pagina in range(1, cantidad_paginas + 1):
+        offset = (pagina - 1) * TAMANO_PAGINA
+        ruta = "/encuentra-un-empleo" if offset == 0 else f"/encuentra-un-empleo/{offset}"
+        url_busqueda = f"https://www.chiletrabajos.cl{ruta}"
+
+        try:
+            respuesta = requests.get(
+                url_busqueda, params={"2": palabra_clave, "f": "2"}, headers=HEADERS, timeout=TIMEOUT_SEGUNDOS
+            )
+        except requests.exceptions.RequestException as e:
+            raise ErrorScraping(f"Fallo de red buscando en ChileTrabajos (página {pagina}): {e}")
+
+        if respuesta.status_code != 200:
+            raise ErrorScraping(
+                f"ChileTrabajos respondió HTTP {respuesta.status_code} en la página {pagina}. "
+                f"Puede ser bloqueo por rate-limit o cambio de URL."
+            )
+
+        soup = BeautifulSoup(respuesta.text, "html.parser")
+        tarjetas = soup.select("div.job-item")
+
+        if not tarjetas:
+            break
+
+        for tarjeta in tarjetas:
+            elemento_titulo = tarjeta.select_one("h2.title a")
+            if elemento_titulo is None:
+                continue
+
+            metas = tarjeta.select("h3.meta")
+            elemento_empresa_ubicacion = metas[0] if metas else None
+            elemento_ubicacion = (
+                elemento_empresa_ubicacion.select_one("a") if elemento_empresa_ubicacion else None
+            )
+            empresa = "No especificada"
+            if elemento_empresa_ubicacion is not None:
+                texto_meta = elemento_empresa_ubicacion.get_text(strip=True)
+                empresa = texto_meta.split(",")[0].strip() or "No especificada"
+
+            resultados.append({
+                "titulo": elemento_titulo.get_text(strip=True),
+                "empresa": empresa,
+                "ubicacion": elemento_ubicacion.get_text(strip=True) if elemento_ubicacion else "No especificada",
+                "modalidad": "",
+                "publicado": metas[1].get_text(strip=True) if len(metas) > 1 else "",
+                "link": elemento_titulo.get("href", ""),
             })
 
     return resultados

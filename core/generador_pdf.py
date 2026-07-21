@@ -4,6 +4,7 @@ consistentes. Sanea nombres de archivo para evitar rutas inválidas.
 """
 
 import re
+from xml.sax.saxutils import escape
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -21,6 +22,19 @@ def sanear_nombre_archivo(texto: str) -> str:
     limpio = re.sub(r'[\\/*?:"<>|\s]', "_", texto.strip())
     limpio = re.sub(r"_+", "_", limpio).strip("_")
     return limpio if limpio else "documento_sin_titulo"
+
+
+def _limpiar_markdown(linea: str) -> str:
+    """
+    Gemini suele responder con sintaxis Markdown (headers, negritas,
+    separadores). El PDF no renderiza Markdown, así que sin esto los
+    símbolos ("**", "###", "***") quedan literales en el documento final.
+    """
+    limpia = linea.strip()
+    limpia = re.sub(r"^#{1,6}\s*", "", limpia)  # headers (#, ##, ###...)
+    limpia = re.sub(r"^[*-]\s+", "- ", limpia)  # bullets ("* x" o "- x")
+    limpia = re.sub(r"\*\*\*|\*\*|(?<!\w)\*(?!\s)", "", limpia)  # negrita/cursiva
+    return limpia
 
 
 def generar_pdf(ruta_salida: str, contenido_texto: str, titulo: str) -> None:
@@ -51,9 +65,10 @@ def generar_pdf(ruta_salida: str, contenido_texto: str, titulo: str) -> None:
         textColor=COLOR_CUERPO,
     )
 
-    elementos = [Paragraph(titulo, estilo_titulo), Spacer(1, 8)]
+    elementos = [Paragraph(escape(titulo), estilo_titulo), Spacer(1, 8)]
     for linea in contenido_texto.split("\n"):
-        if linea.strip():
-            elementos.append(Paragraph(linea, estilo_cuerpo))
+        linea_limpia = _limpiar_markdown(linea)
+        if linea_limpia:
+            elementos.append(Paragraph(escape(linea_limpia), estilo_cuerpo))
 
     documento.build(elementos)
