@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-import browser_cookie3
+try:
+    import browser_cookie3
+except ImportError:
+    browser_cookie3 = None
 import requests
 import sqlite3
 import re
@@ -11,6 +14,9 @@ CARPETA_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(CARPETA_BASE, "perfil", "jobs_vistos.db")
 
 def get_cookies():
+    if not browser_cookie3:
+        print("browser_cookie3 no está instalado en este entorno.")
+        return None
     # Intenta sacar cookies de los navegadores más comunes en Linux
     try:
         print("Intentando extraer cookies de Chrome...")
