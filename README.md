@@ -3,7 +3,7 @@
 [![Sitio Web Oficial](https://img.shields.io/badge/Sitio_Web-huntjob.cumsille.me-blue?style=for-the-badge&logo=googlechrome&logoColor=white)](https://huntjob.cumsille.me)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-[![Render](https://img.shields.io/badge/Despliegue-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://render.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 **HuntJob Chile** es la suite de aceleración laboral diseñada para profesionales y talentos en Chile. Reúne en un solo lugar la búsqueda en tiempo real en los principales portales del país (**Get on Board, Chiletrabajos, Trabajando, Laborum y LinkedIn**), audita tu perfil contra las vacantes usando Inteligencia Artificial de última generación y genera currículums optimizados en PDF diseñados para superar los filtros **ATS (Applicant Tracking Systems)**.
 
