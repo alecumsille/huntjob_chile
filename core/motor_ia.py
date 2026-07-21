@@ -138,8 +138,14 @@ def generar_texto(prompt_sistema: str, texto_base: str) -> str:
 def analizar_match(texto_oferta: str, perfil: dict) -> dict:
     contexto_perfil = formatear_perfil(perfil)
     prompt = (
+        "Eres un reclutador experto y auditor de sistemas ATS (Applicant Tracking Systems). "
         "Compara el perfil del candidato contra la oferta laboral. Responde ÚNICAMENTE un objeto JSON válido "
-        "con las llaves \"score\" (entero de 0 a 100) y \"explicacion\" (string de 2 a 3 líneas con fortalezas y brechas).\n\n"
+        "con las siguientes llaves:\n"
+        "- \"score\": (entero de 0 a 100 indicando la compatibilidad ATS)\n"
+        "- \"explicacion\": (string de 2 a 3 líneas con el diagnóstico general)\n"
+        "- \"fortalezas\": (lista de 2 a 4 ítems con los puntos fuertes coincidentes)\n"
+        "- \"palabras_faltantes\": (lista de 2 a 4 términos o herramientas clave que exige la oferta pero no destacan en el perfil)\n"
+        "- \"recomendaciones\": (lista de 2 a 3 acciones concretas para subir el puntaje de postulación)\n\n"
         f"Perfil del candidato:\n{contexto_perfil}\n\n"
         f"Oferta laboral:\n{texto_oferta[:LIMITE_CARACTERES_CONTEXTO]}"
     )
@@ -148,14 +154,23 @@ def analizar_match(texto_oferta: str, perfil: dict) -> dict:
         "properties": {
             "score": {"type": "INTEGER"},
             "explicacion": {"type": "STRING"},
+            "fortalezas": {"type": "ARRAY", "items": {"type": "STRING"}},
+            "palabras_faltantes": {"type": "ARRAY", "items": {"type": "STRING"}},
+            "recomendaciones": {"type": "ARRAY", "items": {"type": "STRING"}},
         },
-        "required": ["score", "explicacion"],
+        "required": ["score", "explicacion", "fortalezas", "palabras_faltantes", "recomendaciones"],
     }
     
     texto_res = _ejecutar_con_fallback(prompt, response_mime_type="application/json", response_schema=schema)
     try:
         resultado = json.loads(texto_res)
-        return {"score": int(resultado["score"]), "explicacion": str(resultado["explicacion"])}
+        return {
+            "score": int(resultado.get("score", 50)),
+            "explicacion": str(resultado.get("explicacion", "")),
+            "fortalezas": list(resultado.get("fortalezas", [])),
+            "palabras_faltantes": list(resultado.get("palabras_faltantes", [])),
+            "recomendaciones": list(resultado.get("recomendaciones", [])),
+        }
     except Exception as e:
         raise ErrorIA(f"Error procesando respuesta del análisis de match: {e}")
 

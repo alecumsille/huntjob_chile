@@ -484,12 +484,33 @@ elif seccion == "Buscador de Vacantes":
                     match = st.session_state.matches.get(oferta["link"])
                     if match:
                         color_score = "green" if match["score"] >= 70 else "yellow" if match["score"] >= 40 else "red"
-                        st.badge(f"Match: {match['score']}/100", icon=":material/insights:", color=color_score)
+                        st.badge(f"Match ATS: {match['score']}/100", icon=":material/insights:", color=color_score)
                         st.caption(match["explicacion"])
+                        
+                        with st.expander("Ver Auditoría de Compatibilidad ATS Detallada"):
+                            st.progress(match["score"] / 100, text=f"Puntaje de Coincidencia: {match['score']}%")
+                            
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if match.get("fortalezas"):
+                                    st.markdown("**Fortalezas detectadas:**")
+                                    for f in match["fortalezas"]:
+                                        st.markdown(f"- {f}")
+                            with col2:
+                                if match.get("palabras_faltantes"):
+                                    st.markdown("**Palabras clave faltantes en tu CV:**")
+                                    for p in match["palabras_faltantes"]:
+                                        st.markdown(f"- `{p}`")
+                            
+                            if match.get("recomendaciones"):
+                                st.markdown("**Acciones sugeridas para mejorar la postulación:**")
+                                for r in match["recomendaciones"]:
+                                    st.markdown(f"- {r}")
+
                     elif oferta["link"] and st.button(
-                        "Analizar match", icon=":material/insights:", key=f"match_{indice}"
+                        "Analizar match ATS", icon=":material/insights:", key=f"match_{indice}"
                     ):
-                        with st.spinner("Analizando match con tu perfil..."):
+                        with st.spinner("Realizando auditoría ATS con tu perfil..."):
                             try:
                                 texto_oferta = extraer_texto_url(oferta["link"])
                                 st.session_state.matches[oferta["link"]] = analizar_match(
