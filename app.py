@@ -114,9 +114,10 @@ if not st.session_state.get("autenticado"):
         supabase_url = st.secrets.get("SUPABASE_URL", "https://oonkwgfawfyqtrndshhu.supabase.co")
 
         # URLs reales de OAuth de Supabase para cada proveedor
-        url_google = f"{supabase_url}/auth/v1/authorize?provider=google&redirect_to=https://css-spa.streamlit.app/"
-        url_github = f"{supabase_url}/auth/v1/authorize?provider=github&redirect_to=https://css-spa.streamlit.app/"
-        url_facebook = f"{supabase_url}/auth/v1/authorize?provider=facebook&redirect_to=https://css-spa.streamlit.app/"
+        redirect_target = "https://huntjob.cumsille.me"
+        url_google = f"{supabase_url}/auth/v1/authorize?provider=google&redirect_to={redirect_target}"
+        url_github = f"{supabase_url}/auth/v1/authorize?provider=github&redirect_to={redirect_target}"
+        url_facebook = f"{supabase_url}/auth/v1/authorize?provider=facebook&redirect_to={redirect_target}"
 
         st.markdown(
             f"""
