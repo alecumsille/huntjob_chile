@@ -59,10 +59,12 @@ Para tener la app accesible por internet mientras se decide qué hacer con
 la app Android/de escritorio a largo plazo. Streamlit Community Cloud es
 gratis y se conecta directo al repo de GitHub:
 
-1. Andá a [share.streamlit.io](https://share.streamlit.io), conectá tu
-   cuenta de GitHub y elegí este repo (`alecumsille/huntjob_chile`),
+1. En tu workspace de [share.streamlit.io](https://share.streamlit.io),
+   click en "Create app" y elegí este repo (`alecumsille/huntjob_chile`),
    archivo principal `app.py`.
-2. En la configuración de la app (menú "Settings" → "Secrets"), pegá:
+2. Antes de deployar, abrí "Advanced settings" y pegá en el campo
+   "Secrets" (formato TOML) — para una app ya deployada, esto se edita
+   después desde "App settings" → "Secrets":
    ```toml
    GEMINI_API_KEY = "tu-key-de-gemini"
    APP_PASSWORD = "una-clave-que-solo-sepas-vos"
