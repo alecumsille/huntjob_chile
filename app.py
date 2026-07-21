@@ -105,78 +105,98 @@ components.html(
       }}
       @keyframes hj-float {{
         0%, 100% {{ transform: translateY(0px); }}
-        50%       {{ transform: translateY(-7px); }}
-      }}
-      @keyframes hj-float-flag {{
-        0%, 100% {{ transform: translateY(0px) rotate(-1deg); }}
-        50%       {{ transform: translateY(-5px) rotate(1deg); }}
+        50%       {{ transform: translateY(-5px); }}
       }}
       @keyframes hj-search {{
         0%   {{ transform: translateY(0px) rotate(0deg); }}
-        25%  {{ transform: translateY(-5px) rotate(-8deg); }}
-        75%  {{ transform: translateY(-5px) rotate(8deg); }}
+        25%  {{ transform: translateY(-4px) rotate(-8deg); }}
+        75%  {{ transform: translateY(-4px) rotate(8deg); }}
         100% {{ transform: translateY(0px) rotate(0deg); }}
       }}
       .wrap {{
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 10px 8px 6px 0;
+        padding: 6px 4px;
+        box-sizing: border-box;
       }}
       .left {{
         display: flex;
         align-items: center;
-        gap: 18px;
+        gap: 12px;
+        flex: 1;
+        min-width: 0;
       }}
       .logo {{
-        width: 72px;
-        height: 72px;
+        width: 56px;
+        height: 56px;
+        flex-shrink: 0;
         animation: hj-float 3.6s ease-in-out infinite;
-        filter: drop-shadow(0 4px 10px rgba(200,127,160,0.25));
+        filter: drop-shadow(0 4px 8px rgba(200,127,160,0.25));
         cursor: default;
-        transition: filter 0.3s ease;
       }}
       .logo:hover {{
         animation: hj-search 1.2s ease-in-out infinite;
-        filter: drop-shadow(0 6px 18px rgba(200,127,160,0.50));
+      }}
+      .texto-box {{
+        min-width: 0;
       }}
       .titulo {{
-        font-size: 2.4rem;
+        font-size: 1.8rem;
         font-weight: 700;
         color: {paleta_actual['primario']};
         margin: 0;
         line-height: 1.1;
         letter-spacing: -0.5px;
         font-family: 'Quicksand', sans-serif;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }}
       .caption {{
-        font-size: 0.92rem;
-        color: #888;
-        margin: 4px 0 0 0;
+        font-size: 0.82rem;
+        color: #777;
+        margin: 3px 0 0 0;
         font-family: 'Nunito', sans-serif;
+        line-height: 1.2;
       }}
       .flag {{
-        width: 130px;
-        opacity: 0.88;
+        width: 90px;
+        height: auto;
+        flex-shrink: 0;
         mix-blend-mode: multiply;
-        filter: drop-shadow(0 3px 10px rgba(180,0,0,0.18));
-        animation: hj-float-flag 5s ease-in-out infinite;
-        animation-delay: 0.8s;
+        filter: drop-shadow(0 2px 6px rgba(180,0,0,0.15));
+        margin-left: 10px;
+      }}
+      @media (max-width: 520px) {{
+        .logo {{
+          width: 44px;
+          height: 44px;
+        }}
+        .titulo {{
+          font-size: 1.4rem;
+        }}
+        .caption {{
+          font-size: 0.75rem;
+        }}
+        .flag {{
+          width: 65px;
+        }}
       }}
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@700&family=Nunito:wght@400&display=swap" rel="stylesheet">
     <div class="wrap">
       <div class="left">
         <img class="logo" src="data:image/png;base64,{_logo_b64()}" alt="HuntJob Chile">
-        <div>
+        <div class="texto-box">
           <p class="titulo">HuntJob Chile</p>
-          <p class="caption">Motor de postulaciones &mdash; extrae la oferta, analiza con IA y genera el PDF.</p>
+          <p class="caption">Motor de postulaciones &mdash; extrae ofertas, analiza con IA y genera tu PDF.</p>
         </div>
       </div>
-      <img class="flag" src="data:image/png;base64,{_chile_b64()}" alt="Hecho en Chile">
+      <img class="flag" src="data:image/png;base64,{_chile_b64()}" alt="Chile">
     </div>
     """,
-    height=110,
+    height=85,
     scrolling=False,
 )
 
