@@ -73,42 +73,138 @@ if "code" in params or "access_token" in params or "provider" in params:
 
 if not st.session_state.get("autenticado"):
     st.markdown(
-        """
-        <style>
-        .auth-card {
-            background-color: #FFFDFE;
-            border: 1px solid #FCEEF3;
-            border-radius: 16px;
-            padding: 30px;
-            max-width: 480px;
-            margin: 40px auto;
-            box-shadow: 0 10px 30px rgba(200, 127, 160, 0.15);
-            text-align: center;
-        }
-        .auth-title {
-            font-family: 'Quicksand', sans-serif;
-            font-size: 2rem;
-            font-weight: 700;
-            color: #C87FA0;
-            margin-bottom: 8px;
-        }
-        .auth-sub {
-            font-family: 'Nunito', sans-serif;
-            color: #666;
-            font-size: 0.95rem;
-            margin-bottom: 24px;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-    
-    st.markdown(
         f"""
-        <div class="auth-card">
-            <img src="data:image/png;base64,{_logo_b64()}" width="80" style="margin-bottom: 10px;">
-            <div class="auth-title">HuntJob Chile</div>
-            <div class="auth-sub">Inicia sesión o crea tu perfil con tu cuenta preferida</div>
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Quicksand:wght@600;700&display=swap');
+
+        .hero-container {{
+            text-align: center;
+            padding: 40px 20px 20px 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }}
+        .hero-badge {{
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, rgba(200, 127, 160, 0.1), rgba(91, 155, 213, 0.1));
+            border: 1px solid rgba(200, 127, 160, 0.3);
+            color: #C87FA0;
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }}
+        .hero-title {{
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: #2D3748;
+            line-height: 1.2;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #2D3748 0%, #C87FA0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }}
+        .hero-subtitle {{
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1.2rem;
+            color: #64748B;
+            max-width: 650px;
+            margin: 0 auto 30px auto;
+            line-height: 1.6;
+            font-weight: 600;
+        }}
+
+        /* Grid de Beneficios */
+        .features-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            max-width: 900px;
+            margin: 30px auto 40px auto;
+            padding: 0 10px;
+        }}
+        .feature-card {{
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 16px;
+            padding: 22px;
+            text-align: left;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }}
+        .feature-card:hover {{
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(200, 127, 160, 0.12);
+            border-color: #C87FA0;
+        }}
+        .feature-icon {{
+            font-size: 2rem;
+            margin-bottom: 12px;
+            display: inline-block;
+        }}
+        .feature-title {{
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1E293B;
+            margin-bottom: 6px;
+        }}
+        .feature-desc {{
+            font-family: 'Quicksand', sans-serif;
+            font-size: 0.9rem;
+            color: #64748B;
+            line-height: 1.5;
+            font-weight: 600;
+        }}
+
+        .auth-card-landing {{
+            background-color: #FFFFFF;
+            border: 1.5px solid #F1F5F9;
+            border-radius: 20px;
+            padding: 32px 28px;
+            box-shadow: 0 15px 35px rgba(200, 127, 160, 0.1);
+            text-align: center;
+        }}
+        .auth-card-title {{
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: #1E293B;
+            margin-bottom: 8px;
+        }}
+        </style>
+
+        <div class="hero-container">
+            <div class="hero-badge">
+                <img src="data:image/png;base64,{_chile_b64()}" width="20" style="border-radius:3px;">
+                Plataforma Inteligente de Empleos #1 en Chile
+            </div>
+            <div class="hero-title">Encuentra tu trabajo ideal y adáptalo con Inteligencia Artificial</div>
+            <div class="hero-subtitle">
+                Centraliza las mejores ofertas de Chile (Get on Board, Chiletrabajos, Trabajando, Laborum y LinkedIn) y genera currículums optimizados para filtros ATS en segundos.
+            </div>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <span class="feature-icon">🔍</span>
+                <div class="feature-title">Multi-Buscador Real</div>
+                <div class="feature-desc">Busca simultáneamente en todos los portales de empleo de Chile sin perder tiempo abriendo pestañas.</div>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">⚡</span>
+                <div class="feature-title">CV Adaptativo ATS</div>
+                <div class="feature-desc">Nuestra IA reescribe tu CV a la medida de la oferta seleccionada para superar los filtros automáticos.</div>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">📄</span>
+                <div class="feature-title">PDFs Nivel Ejecutivo</div>
+                <div class="feature-desc">Descarga currículums elegantes en 4 plantillas visuales pastel diseñadas para destacar.</div>
+            </div>
         </div>
         """,
         unsafe_allow_html=True
