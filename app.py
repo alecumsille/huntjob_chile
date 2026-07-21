@@ -70,6 +70,14 @@ with st.sidebar:
 if seccion == "Generador por URL":
     st.subheader("Generación de CV y Cover Letter desde una oferta puntual")
 
+    perfil = cargar_perfil()
+    if not perfil["nombre"]:
+        st.warning(
+            "No completaste tu perfil todavía — los documentos se van a generar sin firma. "
+            "Anda al tab \"Mi Perfil\" para completarlo.",
+            icon=":material/warning:",
+        )
+
     if "texto_extraido" not in st.session_state:
         st.session_state.texto_extraido = ""
     if "puesto_detectado" not in st.session_state:
@@ -123,9 +131,10 @@ if seccion == "Generador por URL":
                         f"en {mercado_destino}. Genera un extracto de CV optimizado enfocado en Python, "
                         f"arquitectura backend y automatización, sin relleno."
                     )
+                    nombre_firma = perfil["nombre"] or "Candidato/a"
                     prompt_cover = (
                         f"Actúa como desarrollador senior en Python. Escribe una Cover Letter directa y sin rodeos "
-                        f"para {puesto_objetivo} en {mercado_destino}. Firma con el nombre Ale Cumsille."
+                        f"para {puesto_objetivo} en {mercado_destino}. Firma con el nombre {nombre_firma}."
                     )
 
                     cv_adaptado = generar_texto(prompt_cv, st.session_state.texto_extraido)
@@ -135,8 +144,9 @@ if seccion == "Generador por URL":
                     st.stop()
 
             cargo_limpio = sanear_nombre_archivo(puesto_objetivo)
-            ruta_cv = os.path.join(CARPETA_SALIDA, f"CV_Ale_Cumsille_{cargo_limpio}.pdf")
-            ruta_cl = os.path.join(CARPETA_SALIDA, f"CoverLetter_Ale_Cumsille_{cargo_limpio}.pdf")
+            nombre_archivo = sanear_nombre_archivo(perfil["nombre"] or "candidato")
+            ruta_cv = os.path.join(CARPETA_SALIDA, f"CV_{nombre_archivo}_{cargo_limpio}.pdf")
+            ruta_cl = os.path.join(CARPETA_SALIDA, f"CoverLetter_{nombre_archivo}_{cargo_limpio}.pdf")
 
             try:
                 generar_pdf(ruta_cv, cv_adaptado, f"CV - {puesto_objetivo}")

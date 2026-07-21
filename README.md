@@ -55,6 +55,15 @@ huntjob_chile/
 
 La app además rota entre 4 variantes pastel (fondo, sidebar, botón principal) cada hora, vía un CSS mínimo inyectado en `app.py` — el theme de `config.toml` es fijo por proceso, no soporta cambios programados por sí solo.
 
+## Mi Perfil
+
+Tab en la app donde se completa un perfil real (nombre, años de experiencia,
+seniority, stack principal, logros) que se guarda localmente en
+`perfil/mi_perfil.yaml` (no se commitea, es información personal). Por ahora
+solo se usa para firmar la Cover Letter con tu nombre real; las próximas
+fases lo van a usar también para calcular qué tan buen fit es cada oferta
+encontrada y para personalizar mucho más el contenido generado.
+
 ## Notas de mantenimiento
 
 El módulo `core/scraper_web.py` depende de selectores CSS actuales de cada portal (`article.box_offer` en Computrabajo, `div.job-item` en ChileTrabajos). Si un sitio cambia su estructura HTML, la búsqueda de ese portal dejará de devolver resultados y la función correspondiente lo señalará explícitamente vía `ErrorScraping` — el punto a revisar es la sección de selectores dentro de esa función.
