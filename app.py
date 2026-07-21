@@ -97,107 +97,22 @@ if not st.session_state.get("autenticado"):
     
     col_a, col_b, col_c = st.columns([1, 2, 1])
     with col_b:
-        st.markdown(
-            """
-            <style>
-            .btn-social {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 12px;
-                width: 100%;
-                padding: 12px 20px;
-                border-radius: 10px;
-                font-family: 'Quicksand', sans-serif;
-                font-weight: 700;
-                font-size: 1rem;
-                cursor: pointer;
-                border: none;
-                transition: all 0.2s ease;
-                text-decoration: none;
-                margin-bottom: 12px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            }
-            .btn-google {
-                background-color: #FFFFFF;
-                color: #757575;
-                border: 1px solid #DDDDDD;
-            }
-            .btn-google:hover {
-                background-color: #F8F9FA;
-                border-color: #CCCCCE;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            }
-            .btn-github {
-                background-color: #24292E;
-                color: #FFFFFF;
-            }
-            .btn-github:hover {
-                background-color: #1B1F23;
-                box-shadow: 0 4px 15px rgba(36,41,46,0.3);
-            }
-            .btn-facebook {
-                background-color: #1877F2;
-                color: #FFFFFF;
-            }
-            .btn-facebook:hover {
-                background-color: #166FE5;
-                box-shadow: 0 4px 15px rgba(24,119,242,0.3);
-            }
-            .stButton:has(button[help="Google"]),
-            .stButton:has(button[help="GitHub"]),
-            .stButton:has(button[help="Facebook"]) {
-                display: none !important;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-
-        st.markdown("<p style='text-align:center; font-family:Nunito; color:#666; font-weight:600;'>Selecciona tu método de ingreso:</p>", unsafe_allow_html=True)
+        st.subheader("Selecciona tu método de ingreso:")
         
-        # Botones estilizados en HTML con los iconos PNG
-        g_b64 = _social_icon_b64("google")
-        gh_b64 = _social_icon_b64("github")
-        fb_b64 = _social_icon_b64("facebook")
+        if st.button("Continuar con Google", icon=":material/language:", key="auth_google", use_container_width=True, type="secondary"):
+            st.session_state.autenticado = True
+            st.session_state.proveedor_auth = "Google"
+            st.rerun()
+            
+        if st.button("Continuar con GitHub", icon=":material/code:", key="auth_github", use_container_width=True, type="primary"):
+            st.session_state.autenticado = True
+            st.session_state.proveedor_auth = "GitHub"
+            st.rerun()
 
-        st.markdown(
-            f"""
-            <div style="display:flex; flex-direction:column; gap:10px;">
-                <button onclick="document.getElementById('btn_g_trigger').click()" class="btn-social btn-google">
-                    <img src="data:image/png;base64,{g_b64}" width="20" height="20">
-                    Continuar con Google
-                </button>
-                <button onclick="document.getElementById('btn_gh_trigger').click()" class="btn-social btn-github">
-                    <img src="data:image/png;base64,{gh_b64}" width="20" height="20">
-                    Continuar con GitHub
-                </button>
-                <button onclick="document.getElementById('btn_fb_trigger').click()" class="btn-social btn-facebook">
-                    <img src="data:image/png;base64,{fb_b64}" width="20" height="20">
-                    Continuar con Facebook
-                </button>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-        with st.container():
-            btn_g = st.button("Google", key="btn_g_trigger", help="Google")
-            btn_gh = st.button("GitHub", key="btn_gh_trigger", help="GitHub")
-            btn_fb = st.button("Facebook", key="btn_fb_trigger", help="Facebook")
-
-            if btn_g:
-                st.session_state.autenticado = True
-                st.session_state.proveedor_auth = "Google"
-                st.rerun()
-            if btn_gh:
-                st.session_state.autenticado = True
-                st.session_state.proveedor_auth = "GitHub"
-                st.rerun()
-            if btn_fb:
-                st.session_state.autenticado = True
-                st.session_state.proveedor_auth = "Facebook"
-                st.rerun()
+        if st.button("Continuar con Facebook", icon=":material/groups:", key="auth_facebook", use_container_width=True):
+            st.session_state.autenticado = True
+            st.session_state.proveedor_auth = "Facebook"
+            st.rerun()
             
         if clave_requerida:
             st.markdown("---")
