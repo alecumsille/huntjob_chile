@@ -52,6 +52,12 @@ def _clave_configurada() -> str:
 
 
 clave_requerida = _clave_configurada()
+
+# Si no hay clave de acceso configurada en secrets y el usuario no se ha logueado manualmente,
+# se autentica automáticamente para uso directo sin trabas.
+if not clave_requerida and "autenticado" not in st.session_state:
+    st.session_state["autenticado"] = True
+
 if not st.session_state.get("autenticado"):
     st.markdown(
         """
