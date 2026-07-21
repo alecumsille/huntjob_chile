@@ -29,6 +29,15 @@ def _chile_b64() -> str:
         return base64.b64encode(f.read()).decode()
 
 
+def _social_icon_b64(nombre: str) -> str:
+    """Devuelve el b64 de los logos PNG oficiales."""
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", f"{nombre}.png")
+    if os.path.exists(ruta):
+        with open(ruta, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    return ""
+
+
 def _clave_configurada() -> str:
     """
     Devuelve la clave de acceso configurada vía st.secrets (solo aplica en
@@ -135,6 +144,11 @@ if not st.session_state.get("autenticado"):
                 background-color: #166FE5;
                 box-shadow: 0 4px 15px rgba(24,119,242,0.3);
             }
+            .stButton:has(button[help="Google"]),
+            .stButton:has(button[help="GitHub"]),
+            .stButton:has(button[help="Facebook"]) {
+                display: none !important;
+            }
             </style>
             """,
             unsafe_allow_html=True
@@ -142,23 +156,48 @@ if not st.session_state.get("autenticado"):
 
         st.markdown("<p style='text-align:center; font-family:Nunito; color:#666; font-weight:600;'>Selecciona tu método de ingreso:</p>", unsafe_allow_html=True)
         
-        # Botón Google
-        if st.button("Continuar con Google", key="auth_google", use_container_width=True, type="secondary"):
-            st.session_state.autenticado = True
-            st.session_state.proveedor_auth = "Google"
-            st.rerun()
-            
-        # Botón GitHub
-        if st.button("Continuar con GitHub", key="auth_github", use_container_width=True, type="primary"):
-            st.session_state.autenticado = True
-            st.session_state.proveedor_auth = "GitHub"
-            st.rerun()
+        # Botones estilizados en HTML con los iconos PNG
+        g_b64 = _social_icon_b64("google")
+        gh_b64 = _social_icon_b64("github")
+        fb_b64 = _social_icon_b64("facebook")
 
-        # Botón Facebook
-        if st.button("Continuar con Facebook", key="auth_facebook", use_container_width=True):
-            st.session_state.autenticado = True
-            st.session_state.proveedor_auth = "Facebook"
-            st.rerun()
+        st.markdown(
+            f"""
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <button onclick="document.getElementById('btn_g_trigger').click()" class="btn-social btn-google">
+                    <img src="data:image/png;base64,{g_b64}" width="20" height="20">
+                    Continuar con Google
+                </button>
+                <button onclick="document.getElementById('btn_gh_trigger').click()" class="btn-social btn-github">
+                    <img src="data:image/png;base64,{gh_b64}" width="20" height="20">
+                    Continuar con GitHub
+                </button>
+                <button onclick="document.getElementById('btn_fb_trigger').click()" class="btn-social btn-facebook">
+                    <img src="data:image/png;base64,{fb_b64}" width="20" height="20">
+                    Continuar con Facebook
+                </button>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        with st.container():
+            btn_g = st.button("Google", key="btn_g_trigger", help="Google")
+            btn_gh = st.button("GitHub", key="btn_gh_trigger", help="GitHub")
+            btn_fb = st.button("Facebook", key="btn_fb_trigger", help="Facebook")
+
+            if btn_g:
+                st.session_state.autenticado = True
+                st.session_state.proveedor_auth = "Google"
+                st.rerun()
+            if btn_gh:
+                st.session_state.autenticado = True
+                st.session_state.proveedor_auth = "GitHub"
+                st.rerun()
+            if btn_fb:
+                st.session_state.autenticado = True
+                st.session_state.proveedor_auth = "Facebook"
+                st.rerun()
             
         if clave_requerida:
             st.markdown("---")
