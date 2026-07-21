@@ -14,6 +14,18 @@ from core.db import guardar_historial, obtener_historial_reciente
 
 st.set_page_config(page_title="HuntJob Chile", page_icon="assets/icon.png", layout="wide")
 
+# Redirección automática si alguien accede directamente a la URL de Streamlit Cloud
+components.html(
+    """
+    <script>
+    if (window.location.hostname.includes("streamlit.app")) {
+        window.location.href = "https://huntjob.cumsille.me";
+    }
+    </script>
+    """,
+    height=0,
+)
+
 
 def _logo_b64() -> str:
     """Lee el logo y lo devuelve en base64 para embeber en HTML."""
