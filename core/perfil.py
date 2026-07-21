@@ -13,6 +13,9 @@ RUTA_PERFIL = os.path.join(CARPETA_PERFIL, "mi_perfil.yaml")
 
 VALORES_POR_DEFECTO = {
     "nombre": "",
+    "email": "",
+    "telefono": "",
+    "linkedin": "",
     "anos_experiencia": 0,
     "seniority": "Junior",
     "stack_principal": "",

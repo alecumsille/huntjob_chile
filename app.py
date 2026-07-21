@@ -153,14 +153,19 @@ if seccion == "Generador por URL":
             with st.spinner("Redactando documentos con Gemini..."):
                 try:
                     prompt_cv = (
-                        f"Actúa como experto en ingeniería de software. Analiza la oferta para {puesto_objetivo} "
-                        f"en {mercado_destino}. Genera un extracto de CV optimizado enfocado en Python, "
-                        f"arquitectura backend y automatización, sin relleno."
+                        f"Escribe ÚNICAMENTE el extracto de perfil profesional para un CV, en español, "
+                        f"para el puesto de {puesto_objetivo} en {mercado_destino}, enfocado en Python, "
+                        f"arquitectura backend y automatización. Un párrafo de 4 a 6 líneas, listo para "
+                        f"pegar directo en un CV real, con las palabras clave técnicas relevantes para "
+                        f"pasar filtros ATS. No agregues explicaciones, títulos, análisis de por qué "
+                        f"funciona, consejos, ni ningún texto dirigido al candidato — solo el extracto en sí."
                     )
                     nombre_firma = perfil["nombre"] or "Candidato/a"
                     prompt_cover = (
-                        f"Actúa como desarrollador senior en Python. Escribe una Cover Letter directa y sin rodeos "
-                        f"para {puesto_objetivo} en {mercado_destino}. Firma con el nombre {nombre_firma}."
+                        f"Escribe ÚNICAMENTE el cuerpo de una Cover Letter en español, directa y sin rodeos, "
+                        f"para el puesto de {puesto_objetivo} en {mercado_destino}. Firma con el nombre "
+                        f"{nombre_firma}. No agregues explicaciones, análisis, ni ningún texto que no sea "
+                        f"la carta en sí."
                     )
 
                     cv_adaptado = generar_texto(prompt_cv, st.session_state.texto_extraido)
@@ -175,8 +180,8 @@ if seccion == "Generador por URL":
             ruta_cl = os.path.join(CARPETA_SALIDA, f"CoverLetter_{nombre_archivo}_{cargo_limpio}.pdf")
 
             try:
-                generar_pdf(ruta_cv, cv_adaptado, f"CV - {puesto_objetivo}")
-                generar_pdf(ruta_cl, cover_letter_adaptada, f"Cover Letter - {puesto_objetivo}")
+                generar_pdf(ruta_cv, cv_adaptado, "CV", puesto_objetivo, perfil)
+                generar_pdf(ruta_cl, cover_letter_adaptada, "Cover Letter", puesto_objetivo, perfil)
             except ValueError as e:
                 st.error(f"Fallo generando el PDF: {e}", icon=":material/error:")
                 st.stop()
@@ -270,6 +275,10 @@ elif seccion == "Mi Perfil":
 
     with st.form("form_perfil"):
         nombre = st.text_input("Nombre completo", value=perfil_actual["nombre"])
+        with st.container(horizontal=True):
+            email = st.text_input("Email", value=perfil_actual["email"])
+            telefono = st.text_input("Teléfono", value=perfil_actual["telefono"])
+            linkedin = st.text_input("LinkedIn (url o usuario)", value=perfil_actual["linkedin"])
         anos_experiencia = st.number_input(
             "Años de experiencia", min_value=0, max_value=60, value=perfil_actual["anos_experiencia"]
         )
@@ -291,6 +300,9 @@ elif seccion == "Mi Perfil":
         if st.form_submit_button("Guardar perfil", icon=":material/save:", type="primary"):
             guardar_perfil({
                 "nombre": nombre,
+                "email": email,
+                "telefono": telefono,
+                "linkedin": linkedin,
                 "anos_experiencia": anos_experiencia,
                 "seniority": seniority,
                 "stack_principal": stack_principal,
