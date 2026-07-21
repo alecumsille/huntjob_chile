@@ -1,4 +1,6 @@
 import os
+from datetime import datetime
+
 import streamlit as st
 
 from core.scraper_web import extraer_texto_url, ErrorScraping
@@ -8,6 +10,46 @@ from core.portales import PORTALES, buscar_en_todos
 from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY
 
 st.set_page_config(page_title="HuntJob Chile", page_icon=":material/work:", layout="wide")
+
+# Rotación horaria de paleta: 4 variantes pastel, una por franja horaria
+# (hora % 4). El theme nativo de Streamlit (.streamlit/config.toml) es fijo
+# por proceso, así que la única forma de cambiar colores sin reiniciar el
+# servidor es inyectar CSS con la paleta de la hora actual.
+PALETAS_PASTEL = [
+    {"fondo": "#FFFDFE", "fondo_secundario": "#FCEEF3", "primario": "#C87FA0",
+     "sidebar_fondo": "#EFF6FC", "sidebar_primario": "#5B9BD5"},  # rosado + celeste
+    {"fondo": "#FDFEFC", "fondo_secundario": "#EAF7F0", "primario": "#6FBF95",
+     "sidebar_fondo": "#F3F0FA", "sidebar_primario": "#9B8AC4"},  # menta + lavanda
+    {"fondo": "#FFFEFC", "fondo_secundario": "#FBF0E6", "primario": "#E0A672",
+     "sidebar_fondo": "#EAF3FB", "sidebar_primario": "#6FA8D8"},  # durazno + celeste
+    {"fondo": "#FFFDFE", "fondo_secundario": "#F3EEFC", "primario": "#9B8AC4",
+     "sidebar_fondo": "#FBF0F5", "sidebar_primario": "#D689A8"},  # lavanda + rosado
+]
+
+paleta_actual = PALETAS_PASTEL[datetime.now().hour % len(PALETAS_PASTEL)]
+st.markdown(
+    f"""
+    <style>
+    .stApp {{
+        background-color: {paleta_actual['fondo']};
+    }}
+    [data-testid="stSidebar"] {{
+        background-color: {paleta_actual['sidebar_fondo']};
+    }}
+    div[data-testid="stForm"] {{
+        background-color: {paleta_actual['fondo_secundario']};
+    }}
+    button[kind="primary"] {{
+        background-color: {paleta_actual['primario']} !important;
+        border-color: {paleta_actual['primario']} !important;
+    }}
+    [data-testid="stSidebar"] [role="radiogroup"] label div:first-child {{
+        border-color: {paleta_actual['sidebar_primario']} !important;
+    }}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 st.title("HuntJob Chile")
 st.caption("Motor de postulaciones: extracción de oferta, análisis con IA (Gemini) y generación de PDF.")
