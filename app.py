@@ -73,7 +73,7 @@ if seccion == "Generador por URL":
     perfil = cargar_perfil()
     if not perfil["nombre"]:
         st.warning(
-            "No completaste tu perfil todavía — los documentos se van a generar sin firma. "
+            "No completaste tu perfil todavía — los documentos se van a firmar como \"Candidato/a\". "
             "Anda al tab \"Mi Perfil\" para completarlo.",
             icon=":material/warning:",
         )
@@ -247,9 +247,11 @@ elif seccion == "Mi Perfil":
         anos_experiencia = st.number_input(
             "Años de experiencia", min_value=0, max_value=60, value=perfil_actual["anos_experiencia"]
         )
-        seniority = st.selectbox(
-            "Nivel", NIVELES_SENIORITY, index=NIVELES_SENIORITY.index(perfil_actual["seniority"])
+        seniority_guardado = perfil_actual["seniority"]
+        indice_seniority = (
+            NIVELES_SENIORITY.index(seniority_guardado) if seniority_guardado in NIVELES_SENIORITY else 0
         )
+        seniority = st.selectbox("Nivel", NIVELES_SENIORITY, index=indice_seniority)
         stack_principal = st.text_input(
             "Stack principal (lenguajes, frameworks, herramientas)",
             value=perfil_actual["stack_principal"],

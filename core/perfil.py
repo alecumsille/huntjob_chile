@@ -31,8 +31,14 @@ def cargar_perfil() -> dict:
     if not os.path.exists(RUTA_PERFIL):
         return dict(VALORES_POR_DEFECTO)
 
-    with open(RUTA_PERFIL, "r", encoding="utf-8") as archivo:
-        datos_guardados = yaml.safe_load(archivo) or {}
+    try:
+        with open(RUTA_PERFIL, "r", encoding="utf-8") as archivo:
+            datos_guardados = yaml.safe_load(archivo) or {}
+    except yaml.YAMLError:
+        return dict(VALORES_POR_DEFECTO)
+
+    if not isinstance(datos_guardados, dict):
+        return dict(VALORES_POR_DEFECTO)
 
     perfil = dict(VALORES_POR_DEFECTO)
     perfil.update(datos_guardados)
