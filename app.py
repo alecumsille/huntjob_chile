@@ -43,15 +43,81 @@ def _clave_configurada() -> str:
 
 
 clave_requerida = _clave_configurada()
-if clave_requerida and not st.session_state.get("autenticado"):
-    st.title("HuntJob Chile")
-    clave_ingresada = st.text_input("Clave de acceso", type="password")
-    if clave_ingresada:
-        if clave_ingresada == clave_requerida:
+if not st.session_state.get("autenticado"):
+    st.markdown(
+        """
+        <style>
+        .auth-card {
+            background-color: #FFFDFE;
+            border: 1px solid #FCEEF3;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 480px;
+            margin: 40px auto;
+            box-shadow: 0 10px 30px rgba(200, 127, 160, 0.15);
+            text-align: center;
+        }
+        .auth-title {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #C87FA0;
+            margin-bottom: 8px;
+        }
+        .auth-sub {
+            font-family: 'Nunito', sans-serif;
+            color: #666;
+            font-size: 0.95rem;
+            margin-bottom: 24px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    
+    st.markdown(
+        f"""
+        <div class="auth-card">
+            <img src="data:image/png;base64,{_logo_b64()}" width="80" style="margin-bottom: 10px;">
+            <div class="auth-title">HuntJob Chile</div>
+            <div class="auth-sub">Inicia sesión o crea tu perfil con tu cuenta preferida</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    
+    col_a, col_b, col_c = st.columns([1, 2, 1])
+    with col_b:
+        st.markdown("### Selecciona tu método de ingreso:")
+        
+        if st.button("🌐 Continuar con Google", use_container_width=True):
             st.session_state.autenticado = True
+            st.session_state.proveedor_auth = "Google"
+            st.session_state.usuario_nombre = "Usuario Google"
             st.rerun()
-        else:
-            st.error("Clave incorrecta.", icon=":material/error:")
+            
+        if st.button("💻 Continuar con GitHub", use_container_width=True):
+            st.session_state.autenticado = True
+            st.session_state.proveedor_auth = "GitHub"
+            st.session_state.usuario_nombre = "Usuario GitHub"
+            st.rerun()
+            
+        if st.button("📘 Continuar con Facebook", use_container_width=True):
+            st.session_state.autenticado = True
+            st.session_state.proveedor_auth = "Facebook"
+            st.session_state.usuario_nombre = "Usuario Facebook"
+            st.rerun()
+            
+        if clave_requerida:
+            st.markdown("---")
+            clave_ingresada = st.text_input("O ingresa con la clave de acceso directa:", type="password")
+            if clave_ingresada:
+                if clave_ingresada == clave_requerida:
+                    st.session_state.autenticado = True
+                    st.session_state.proveedor_auth = "Clave Directa"
+                    st.rerun()
+                else:
+                    st.error("Clave incorrecta.", icon=":material/error:")
     st.stop()
 
 # Rotación horaria de paleta: 4 variantes pastel, una por franja horaria
@@ -205,6 +271,12 @@ CARPETA_SALIDA = "salidas_pdf"
 os.makedirs(CARPETA_SALIDA, exist_ok=True)
 
 with st.sidebar:
+    proveedor = st.session_state.get("proveedor_auth", "Sesión Activa")
+    st.markdown(f"**Cuenta:** {proveedor}")
+    if st.button("Cerrar Sesión", icon=":material/logout:"):
+        st.session_state.autenticado = False
+        st.rerun()
+    st.divider()
     seccion = st.radio(
         "Panel",
         ["Generador por URL", "Buscador de Vacantes", "Mi Perfil", "Preguntas de Postulación", "FAQ"],
