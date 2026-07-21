@@ -100,9 +100,73 @@ def _clave_configurada() -> str:
 
 clave_requerida = _clave_configurada()
 
-# Acceso directo por defecto
-if "autenticado" not in st.session_state:
+# Si el usuario vuelve desde el flujo OAuth de Supabase (URL contiene access_token o code)
+params = st.query_params
+if "code" in params or "access_token" in params or "provider" in params:
     st.session_state["autenticado"] = True
+    st.session_state["proveedor_auth"] = params.get("provider", "OAuth Social")
+
+if not st.session_state.get("autenticado", False):
+    col_a, col_b, col_c = st.columns([1, 2, 1])
+    with col_b:
+        st.markdown(
+            f"""
+            <div style="text-align: center; padding: 30px 20px; background: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-top: 40px;">
+                <img src="data:image/png;base64,{_logo_b64()}" width="70" style="margin-bottom: 10px;">
+                <h2 style="font-family: 'Quicksand', sans-serif; color: #2D3748; margin-bottom: 5px;">HuntJob Chile</h2>
+                <p style="color: #64748B; font-size: 0.95rem; margin-bottom: 25px;">Selecciona tu cuenta para ingresar:</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        
+        g_b64 = _social_icon_b64("google")
+        gh_b64 = _social_icon_b64("github")
+        fb_b64 = _social_icon_b64("facebook")
+        supabase_url = st.secrets.get("SUPABASE_URL", "https://oonkwgfawfyqtrndshhu.supabase.co")
+        redirect_target = "https://huntjob.cumsille.me"
+        url_google = f"{supabase_url}/auth/v1/authorize?provider=google&redirect_to={redirect_target}"
+        url_github = f"{supabase_url}/auth/v1/authorize?provider=github&redirect_to={redirect_target}"
+        url_facebook = f"{supabase_url}/auth/v1/authorize?provider=facebook&redirect_to={redirect_target}"
+
+        st.markdown(
+            f"""
+            <style>
+            .social-btn-link {{
+                display: flex !important; align-items: center !important; justify-content: center !important;
+                gap: 12px !important; width: 100% !important; height: 48px !important; border-radius: 12px !important;
+                font-family: 'Inter', sans-serif !important; font-weight: 600 !important; font-size: 0.95rem !important;
+                text-decoration: none !important; transition: all 0.2s ease !important; margin-bottom: 12px !important;
+                box-sizing: border-box !important;
+            }}
+            .btn-g-style {{ background: #FFFFFF !important; color: #0F172A !important; border: 1px solid #CBD5E1 !important; }}
+            .btn-gh-style {{ background: #1E293B !important; color: #F8FAFC !important; border: 1px solid #1E293B !important; }}
+            .btn-fb-style {{ background: #1877F2 !important; color: #FFFFFF !important; border: 1px solid #1877F2 !important; }}
+            .icon-img {{ width: 20px !important; height: 20px !important; object-fit: contain !important; }}
+            </style>
+
+            <a href="{url_google}" class="social-btn-link btn-g-style" target="_self">
+                <img src="data:image/png;base64,{g_b64}" class="icon-img" alt="Google">
+                <span>Continuar con Google</span>
+            </a>
+            <a href="{url_github}" class="social-btn-link btn-gh-style" target="_self">
+                <img src="data:image/png;base64,{gh_b64}" class="icon-img" alt="GitHub">
+                <span>Continuar con GitHub</span>
+            </a>
+            <a href="{url_facebook}" class="social-btn-link btn-fb-style" target="_self">
+                <img src="data:image/png;base64,{fb_b64}" class="icon-img" alt="Facebook">
+                <span>Continuar con Facebook</span>
+            </a>
+            """,
+            unsafe_allow_html=True
+        )
+
+        if st.button("Ingreso Rápido Directo", use_container_width=True, type="secondary"):
+            st.session_state["autenticado"] = True
+            st.session_state["proveedor_auth"] = "Usuario Invitado"
+            st.rerun()
+
+    st.stop()
 
 # Rotación horaria de paleta: 4 variantes pastel, una por franja horaria
 # (hora % 4). El theme nativo de Streamlit (.streamlit/config.toml) es fijo
@@ -255,10 +319,12 @@ CARPETA_SALIDA = "salidas_pdf"
 os.makedirs(CARPETA_SALIDA, exist_ok=True)
 
 with st.sidebar:
-    proveedor = st.session_state.get("proveedor_auth", "Sesión Activa")
+    proveedor = st.session_state.get("proveedor_auth", "Usuario Registrado")
     st.markdown(f"**Cuenta:** {proveedor}")
-    if st.button("Cerrar Sesión", icon=":material/logout:"):
-        st.session_state.autenticado = False
+    if st.button("Cerrar Sesión", icon=":material/logout:", use_container_width=True):
+        st.session_state["autenticado"] = False
+        st.session_state["perfil_usuario"] = {}
+        st.session_state["proveedor_auth"] = None
         st.rerun()
     st.divider()
     seccion = st.radio(
@@ -558,18 +624,35 @@ elif seccion == "Mi Perfil":
             height=200,
         )
 
-        if st.form_submit_button("Guardar perfil", icon=":material/save:", type="primary"):
-            guardar_perfil({
-                "nombre": nombre,
-                "email": email,
-                "telefono": telefono,
-                "linkedin": linkedin,
-                "anos_experiencia": anos_experiencia,
-                "seniority": seniority,
-                "stack_principal": stack_principal,
-                "logros_y_experiencia": logros_y_experiencia,
-            })
-            st.success("Perfil guardado.", icon=":material/check_circle:")
+        col_sub1, col_sub2 = st.columns(2)
+        with col_sub1:
+            if st.form_submit_button("Guardar perfil", icon=":material/save:", type="primary", use_container_width=True):
+                guardar_perfil({
+                    "nombre": nombre,
+                    "email": email,
+                    "telefono": telefono,
+                    "linkedin": linkedin,
+                    "anos_experiencia": anos_experiencia,
+                    "seniority": seniority,
+                    "stack_principal": stack_principal,
+                    "logros_y_experiencia": logros_y_experiencia,
+                })
+                st.success("Perfil guardado.", icon=":material/check_circle:")
+        with col_sub2:
+            if st.form_submit_button("Limpiar campos del perfil", icon=":material/delete:", use_container_width=True):
+                guardar_perfil({
+                    "nombre": "",
+                    "email": "",
+                    "telefono": "",
+                    "linkedin": "",
+                    "anos_experiencia": 0,
+                    "seniority": "Junior",
+                    "stack_principal": "",
+                    "logros_y_experiencia": "",
+                })
+                st.session_state["perfil_usuario"] = {}
+                st.success("Perfil limpiado correctamente.", icon=":material/check_circle:")
+                st.rerun()
 
 # -------------------------------------------------------------
 # SECCIÓN 4: PREGUNTAS DE POSTULACIÓN
