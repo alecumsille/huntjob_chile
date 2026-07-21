@@ -47,6 +47,8 @@ huntjob_chile/
 │   ├── portales.py         # Dispatcher multi-portal (registro + búsqueda agregada)
 │   ├── motor_ia.py         # Generación de texto vía Gemini (Google AI)
 │   └── generador_pdf.py    # Compilación de CV / Cover Letter en PDF
+├── .streamlit/
+│   └── config.toml         # Tema visual (shadcn-inspired)
 └── requirements.txt
 ```
 
