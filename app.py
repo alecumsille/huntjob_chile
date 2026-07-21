@@ -172,8 +172,8 @@ if seccion == "Generador por URL":
     perfil = cargar_perfil()
     if not perfil["nombre"]:
         st.warning(
-            "No completaste tu perfil todavía — los documentos se van a firmar como \"Candidato/a\". "
-            "Anda al tab \"Mi Perfil\" para completarlo.",
+            "Tu perfil aún no está completo — los documentos se firmarán como \"Candidato/a\". "
+            "Ve a \"Mi Perfil\" para completarlo.",
             icon=":material/warning:",
         )
 
@@ -203,7 +203,7 @@ if seccion == "Generador por URL":
                         prompt_detectar_cargo, st.session_state.texto_extraido
                     )
                 except ErrorIA as e:
-                    st.error(f"Fallo en la capa de IA: {e}", icon=":material/error:")
+                    st.error(f"Error en la IA: {e}", icon=":material/error:")
                     st.stop()
 
     with st.container(border=True):
@@ -228,36 +228,33 @@ if seccion == "Generador por URL":
                     contexto_perfil = formatear_perfil(perfil)
                     prompt_cv = (
                         f"Escribe ÚNICAMENTE el extracto de perfil profesional para un CV, en español, "
-                        f"para el puesto de {puesto_objetivo} en {mercado_destino}. Basate en el stack y "
-                        f"los logros reales del candidato de abajo — seleccioná solo lo que sea relevante "
-                        f"para esta oferta puntual, no listes todo. NUNCA digas que el candidato domina o "
-                        f"usa una tecnología que no esté textualmente en su 'Stack principal' de abajo, "
-                        f"aunque la oferta la pida — si la oferta pide algo que el candidato no tiene, "
-                        f"simplemente no lo menciones como si lo dominara. No inventes nada que no esté en "
-                        f"el perfil. Un párrafo de 4 a 6 líneas, listo para pegar directo en un CV real, con "
-                        f"las palabras clave técnicas relevantes para pasar filtros ATS. No agregues "
-                        f"explicaciones, títulos, análisis de por qué funciona, consejos, ni ningún texto "
-                        f"dirigido al candidato — solo el extracto en sí.\n\n"
+                        f"para el puesto de {puesto_objetivo} en {mercado_destino}. Usa el stack y "
+                        f"los logros reales del candidato — selecciona solo lo relevante para esta oferta, "
+                        f"no listes todo. NUNCA indiques que el candidato domina o usa una tecnología que "
+                        f"no esté textualmente en su 'Stack principal', aunque la oferta la pida — si la "
+                        f"oferta pide algo que el candidato no tiene, simplemente no lo menciones. No "
+                        f"inventes nada que no esté en el perfil. Un párrafo de 4 a 6 líneas, listo para "
+                        f"incluir en un CV real, con las palabras clave técnicas para pasar filtros ATS. "
+                        f"No agregues explicaciones, títulos ni ningún texto adicional — solo el extracto.\n\n"
                         f"Perfil del candidato:\n{contexto_perfil}"
                     )
                     nombre_firma = perfil["nombre"] or "Candidato/a"
                     prompt_cover = (
                         f"Escribe ÚNICAMENTE el cuerpo de una Cover Letter en español, directa y sin rodeos, "
-                        f"para el puesto de {puesto_objetivo} en {mercado_destino}. Si el perfil de abajo "
-                        f"tiene logros o experiencia cargada, mencioná como máximo uno concreto que calce "
-                        f"con esta oferta puntual, en vez de lenguaje genérico de relleno — si no hay logros "
-                        f"cargados, escribí sin inventar ninguno. NUNCA digas que el candidato domina o usa "
-                        f"una tecnología que no esté textualmente en su 'Stack principal' de abajo, aunque la "
-                        f"oferta la pida — en ese caso, podés mencionar disposición a aprenderla, nunca "
-                        f"dominio que no tiene. Firma con el nombre {nombre_firma}. No agregues explicaciones, "
-                        f"análisis, ni ningún texto que no sea la carta en sí.\n\n"
+                        f"para el puesto de {puesto_objetivo} en {mercado_destino}. Si el perfil tiene "
+                        f"logros o experiencia, menciona como máximo uno concreto que calce con esta oferta "
+                        f"— si no hay logros cargados, escribe sin inventar ninguno. NUNCA indiques que el "
+                        f"candidato domina o usa una tecnología que no esté textualmente en su 'Stack "
+                        f"principal', aunque la oferta la pida — en ese caso, puedes mencionar disposición "
+                        f"a aprenderla, nunca dominio que no tiene. Firma con el nombre {nombre_firma}. "
+                        f"No agregues explicaciones ni ningún texto que no sea la carta en sí.\n\n"
                         f"Perfil del candidato:\n{contexto_perfil}"
                     )
 
                     cv_adaptado = generar_texto(prompt_cv, st.session_state.texto_extraido)
                     cover_letter_adaptada = generar_texto(prompt_cover, st.session_state.texto_extraido)
                 except ErrorIA as e:
-                    st.error(f"Fallo generando el contenido: {e}", icon=":material/error:")
+                    st.error(f"Error al generar el contenido: {e}", icon=":material/error:")
                     st.stop()
 
             cargo_limpio = sanear_nombre_archivo(puesto_objetivo)
@@ -269,7 +266,7 @@ if seccion == "Generador por URL":
                 generar_pdf(ruta_cv, cv_adaptado, "CV", puesto_objetivo, perfil)
                 generar_pdf(ruta_cl, cover_letter_adaptada, "Cover Letter", puesto_objetivo, perfil)
             except ValueError as e:
-                st.error(f"Fallo generando el PDF: {e}", icon=":material/error:")
+                st.error(f"Error al generar el PDF: {e}", icon=":material/error:")
                 st.stop()
 
             st.success("Documentos generados correctamente.", icon=":material/check_circle:")
@@ -379,7 +376,7 @@ elif seccion == "Buscador de Vacantes":
                             except ErrorScraping as e:
                                 st.error(f"No se pudo leer la oferta: {e}", icon=":material/error:")
                             except ErrorIA as e:
-                                st.error(f"Fallo en la capa de IA: {e}", icon=":material/error:")
+                                st.error(f"Error en la IA: {e}", icon=":material/error:")
 
 # -------------------------------------------------------------
 # SECCIÓN 3: MI PERFIL
@@ -387,10 +384,8 @@ elif seccion == "Buscador de Vacantes":
 elif seccion == "Mi Perfil":
     st.subheader("Mi perfil")
     st.caption(
-        "Estos datos van a servir para que la IA compare ofertas contra tu "
-        "perfil real y genere CVs/Cover Letters mucho más personalizados "
-        "en las próximas versiones. Por ahora, el nombre ya se usa para "
-        "firmar la Cover Letter."
+        "Con estos datos la IA compara ofertas con tu perfil y personaliza tu CV y Cover Letter. "
+        "Tu nombre ya aparece en la firma de la carta."
     )
 
     perfil_actual = cargar_perfil()
@@ -438,9 +433,8 @@ elif seccion == "Mi Perfil":
 elif seccion == "Preguntas de Postulación":
     st.subheader("Asistente de respuestas para formularios de postulación")
     st.caption(
-        "Pegá la pregunta tal cual aparece en el formulario real (y las alternativas, "
-        "si es de opción múltiple). La respuesta sugerida es para copiar manualmente — "
-        "la app nunca completa ni envía nada en un formulario real."
+        "Pega la pregunta tal como aparece en el formulario (con las alternativas si es de selección múltiple). "
+        "La respuesta es para que tú la copies — la app nunca envía nada por ti."
     )
 
     with st.container(border=True):
@@ -451,7 +445,7 @@ elif seccion == "Preguntas de Postulación":
 
         if st.button("Sugerir respuesta", icon=":material/lightbulb:", type="primary"):
             if not pregunta.strip():
-                st.error("Pegá la pregunta del formulario primero.", icon=":material/error:")
+                st.error("Primero pega la pregunta del formulario.", icon=":material/error:")
                 st.stop()
 
             opciones = (
@@ -465,11 +459,11 @@ elif seccion == "Preguntas de Postulación":
                     perfil_para_pregunta = cargar_perfil()
                     resultado = sugerir_respuesta(pregunta, perfil_para_pregunta, opciones=opciones)
                 except ErrorIA as e:
-                    st.error(f"Fallo en la capa de IA: {e}", icon=":material/error:")
+                    st.error(f"Error en la IA: {e}", icon=":material/error:")
                     st.stop()
 
             st.success("Respuesta sugerida", icon=":material/check_circle:")
-            st.text_area("Respuesta (copiá esto al formulario real)", value=resultado["respuesta"], height=100)
+            st.text_area("Respuesta sugerida (cópiala en el formulario)", value=resultado["respuesta"], height=100)
             st.caption(resultado["justificacion"])
 
 # -------------------------------------------------------------
@@ -477,50 +471,44 @@ elif seccion == "Preguntas de Postulación":
 # -------------------------------------------------------------
 elif seccion == "FAQ":
     st.subheader("Preguntas frecuentes")
-    st.caption("Qué es HuntJob Chile, explicado como si te lo contara en el ascensor.")
+    st.caption("Lo esencial sobre HuntJob Chile, en pocas palabras.")
 
     with st.container(border=True):
         st.markdown("#### ¿Qué es HuntJob Chile?")
         st.write(
-            "Una app personal (no un producto para vender) que te ayuda a postular a "
-            "trabajos en Chile más rápido y con mejor calidad, usando IA de verdad — no "
-            "plantillas genéricas."
+            "Una app para postular a trabajos en Chile de forma más rápida y efectiva, "
+            "usando inteligencia artificial — sin plantillas genéricas."
         )
 
     with st.container(border=True):
         st.markdown("#### ¿Qué hace exactamente?")
         st.markdown(
-            "- **Genera tu CV y Cover Letter** a partir del link de una oferta real — "
-            "pegás la URL, la IA lee la oferta y redacta un extracto adaptado a ese "
-            "puesto puntual, usando tu perfil real (tu stack, tus logros), no inventado.\n"
-            "- **Busca vacantes** en varios portales chilenos a la vez (Computrabajo, "
-            "ChileTrabajos) desde un solo lugar.\n"
-            "- **Te dice qué tan buen match** es cada oferta contra tu perfil — un score "
-            "y por qué, para no perder tiempo postulando a algo que no calza.\n"
-            "- **Te ayuda con las preguntas raras del formulario** de postulación "
-            "(incluso las de opción múltiple), sugiriendo una respuesta que después vos "
-            "copiás manualmente."
+            "- **Genera tu CV y Cover Letter** desde el link de una oferta real — pegas la URL, "
+            "la IA la lee y redacta un texto adaptado a ese cargo usando tu perfil (tu stack, tus logros).\n"
+            "- **Busca vacantes** en varios portales chilenos al mismo tiempo (Computrabajo, ChileTrabajos).\n"
+            "- **Analiza qué tan buen match** eres para cada oferta — con puntaje y explicación, "
+            "para no perder tiempo en postulaciones que no calzan.\n"
+            "- **Sugiere respuestas para el formulario** de postulación (incluso preguntas de selección múltiple), "
+            "para que tú las copies cuando corresponda."
         )
 
     with st.container(border=True):
         st.markdown("#### ¿Mis datos quedan seguros?")
         st.write(
-            "Tu perfil (nombre, experiencia, logros) se guarda solo en tu propia máquina "
-            "o tu cuenta de Streamlit — nunca se sube al repositorio de GitHub, y la app "
-            "nunca completa ni envía nada por su cuenta en un formulario real."
+            "Tu información (nombre, experiencia, logros) se guarda solo en tu cuenta — "
+            "nunca en el repositorio de GitHub. La app tampoco envía nada por ti en formularios externos."
         )
 
     with st.container(border=True):
-        st.markdown("#### ¿Corre en mi computador o en internet?")
+        st.markdown("#### ¿Funciona en mi computador o en internet?")
         st.write(
-            "Las dos formas: instalable como app de escritorio en Linux (con su propio "
-            "ícono en el menú de aplicaciones), o como app web si la desplegás en "
-            "Streamlit Community Cloud."
+            "Las dos: como app de escritorio en Linux (con ícono en el menú de aplicaciones), "
+            "o como app web alojada en la nube."
         )
 
     with st.container(border=True):
         st.markdown("#### ¿Por qué cambian los colores de la app?")
         st.write(
-            "Un detalle personal: la paleta pastel rota entre 4 variantes según la hora "
-            "del día. No cambia nada funcional — es solo para que se sienta viva."
+            "Un detalle de diseño: los colores rotan entre 4 paletas pastel según la hora del día. "
+            "Es solo visual, no afecta nada en el funcionamiento."
         )
