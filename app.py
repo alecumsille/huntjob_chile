@@ -94,26 +94,95 @@ if not st.session_state.get("autenticado"):
         """,
         unsafe_allow_html=True
     )
-    
     col_a, col_b, col_c = st.columns([1, 2, 1])
     with col_b:
-        st.subheader("Selecciona tu método de ingreso:")
-        
-        if st.button("Continuar con Google", icon=":material/language:", key="auth_google", use_container_width=True, type="secondary"):
+        g_b64 = _social_icon_b64("google")
+        gh_b64 = _social_icon_b64("github")
+        fb_b64 = _social_icon_b64("facebook")
+
+        st.markdown(
+            f"""
+            <style>
+            /* --- Inyección de logos PNG en botones nativos --- */
+            button[data-testid="baseButton-secondary"]:has(div:contains("Google")),
+            div.stButton button:has(p:contains("Google")) {{
+                background-image: url("data:image/png;base64,{g_b64}") !important;
+                background-repeat: no-repeat !important;
+                background-position: 18px center !important;
+                background-size: 20px 20px !important;
+                padding-left: 45px !important;
+                background-color: #FFFFFF !important;
+                color: #3C4043 !important;
+                border: 1px solid #DADCE0 !important;
+                font-family: 'Quicksand', sans-serif !important;
+                font-weight: 700 !important;
+                border-radius: 12px !important;
+                box-shadow: 0 3px 10px rgba(0,0,0,0.05) !important;
+            }}
+            div.stButton button:has(p:contains("Google")):hover {{
+                background-color: #F8F9FA !important;
+                border-color: #C6C8CC !important;
+                box-shadow: 0 4px 14px rgba(0,0,0,0.08) !important;
+            }}
+
+            div.stButton button:has(p:contains("GitHub")) {{
+                background-image: url("data:image/png;base64,{gh_b64}") !important;
+                background-repeat: no-repeat !important;
+                background-position: 18px center !important;
+                background-size: 20px 20px !important;
+                padding-left: 45px !important;
+                background-color: #24292E !important;
+                color: #FFFFFF !important;
+                border: 1px solid #24292E !important;
+                font-family: 'Quicksand', sans-serif !important;
+                font-weight: 700 !important;
+                border-radius: 12px !important;
+                filter: invert(0) !important;
+            }}
+            div.stButton button:has(p:contains("GitHub")):hover {{
+                background-color: #1B1F23 !important;
+                box-shadow: 0 4px 14px rgba(36,41,46,0.3) !important;
+            }}
+
+            div.stButton button:has(p:contains("Facebook")) {{
+                background-image: url("data:image/png;base64,{fb_b64}") !important;
+                background-repeat: no-repeat !important;
+                background-position: 18px center !important;
+                background-size: 20px 20px !important;
+                padding-left: 45px !important;
+                background-color: #1877F2 !important;
+                color: #FFFFFF !important;
+                border: 1px solid #1877F2 !important;
+                font-family: 'Quicksand', sans-serif !important;
+                font-weight: 700 !important;
+                border-radius: 12px !important;
+            }}
+            div.stButton button:has(p:contains("Facebook")):hover {{
+                background-color: #166FE5 !important;
+                box-shadow: 0 4px 14px rgba(24,119,242,0.3) !important;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown("<p style='text-align:center; font-family:Nunito; color:#666; font-weight:700; font-size:1.05rem; margin-bottom:15px;'>Selecciona tu método de ingreso:</p>", unsafe_allow_html=True)
+
+        if st.button("Continuar con Google", key="btn_g", use_container_width=True):
             st.session_state.autenticado = True
             st.session_state.proveedor_auth = "Google"
             st.rerun()
-            
-        if st.button("Continuar con GitHub", icon=":material/code:", key="auth_github", use_container_width=True, type="primary"):
+
+        if st.button("Continuar con GitHub", key="btn_gh", use_container_width=True):
             st.session_state.autenticado = True
             st.session_state.proveedor_auth = "GitHub"
             st.rerun()
 
-        if st.button("Continuar con Facebook", icon=":material/groups:", key="auth_facebook", use_container_width=True):
+        if st.button("Continuar con Facebook", key="btn_fb", use_container_width=True):
             st.session_state.autenticado = True
             st.session_state.proveedor_auth = "Facebook"
             st.rerun()
-            
+
         if clave_requerida:
             st.markdown("---")
             clave_ingresada = st.text_input("O ingresa con la clave de acceso directa:", type="password")
