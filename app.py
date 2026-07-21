@@ -5,6 +5,7 @@ from core.scraper_web import extraer_texto_url, ErrorScraping
 from core.motor_ia import generar_texto, ErrorIA
 from core.generador_pdf import generar_pdf, sanear_nombre_archivo
 from core.portales import PORTALES, buscar_en_todos
+from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY
 
 st.set_page_config(page_title="HuntJob Chile", page_icon=":material/work:", layout="wide")
 
@@ -17,7 +18,7 @@ os.makedirs(CARPETA_SALIDA, exist_ok=True)
 with st.sidebar:
     seccion = st.radio(
         "Panel",
-        ["Generador por URL", "Buscador de Vacantes"],
+        ["Generador por URL", "Buscador de Vacantes", "Mi Perfil"],
     )
     st.caption("HuntJob Chile")
 
@@ -174,3 +175,45 @@ elif seccion == "Buscador de Vacantes":
                                 st.caption(oferta["publicado"])
                         if oferta["link"]:
                             st.link_button("Ver oferta", oferta["link"], icon=":material/open_in_new:")
+
+# -------------------------------------------------------------
+# SECCIÓN 3: MI PERFIL
+# -------------------------------------------------------------
+elif seccion == "Mi Perfil":
+    st.subheader("Mi perfil")
+    st.caption(
+        "Estos datos van a servir para que la IA compare ofertas contra tu "
+        "perfil real y genere CVs/Cover Letters mucho más personalizados "
+        "en las próximas versiones. Por ahora, el nombre ya se usa para "
+        "firmar la Cover Letter."
+    )
+
+    perfil_actual = cargar_perfil()
+
+    with st.form("form_perfil"):
+        nombre = st.text_input("Nombre completo", value=perfil_actual["nombre"])
+        anos_experiencia = st.number_input(
+            "Años de experiencia", min_value=0, max_value=60, value=perfil_actual["anos_experiencia"]
+        )
+        seniority = st.selectbox(
+            "Nivel", NIVELES_SENIORITY, index=NIVELES_SENIORITY.index(perfil_actual["seniority"])
+        )
+        stack_principal = st.text_input(
+            "Stack principal (lenguajes, frameworks, herramientas)",
+            value=perfil_actual["stack_principal"],
+        )
+        logros_y_experiencia = st.text_area(
+            "Logros y experiencia (proyectos reales, resultados concretos)",
+            value=perfil_actual["logros_y_experiencia"],
+            height=200,
+        )
+
+        if st.form_submit_button("Guardar perfil", icon=":material/save:", type="primary"):
+            guardar_perfil({
+                "nombre": nombre,
+                "anos_experiencia": anos_experiencia,
+                "seniority": seniority,
+                "stack_principal": stack_principal,
+                "logros_y_experiencia": logros_y_experiencia,
+            })
+            st.success("Perfil guardado.", icon=":material/check_circle:")
