@@ -53,10 +53,11 @@ def _clave_configurada() -> str:
 
 clave_requerida = _clave_configurada()
 
-# Si no hay clave de acceso configurada en secrets y el usuario no se ha logueado manualmente,
-# se autentica automáticamente para uso directo sin trabas.
-if not clave_requerida and "autenticado" not in st.session_state:
+# Si el usuario vuelve desde el flujo OAuth de Supabase (URL contiene access_token o code)
+params = st.query_params
+if "code" in params or "access_token" in params or "provider" in params:
     st.session_state["autenticado"] = True
+    st.session_state["proveedor_auth"] = params.get("provider", "OAuth Social")
 
 if not st.session_state.get("autenticado"):
     st.markdown(
@@ -139,20 +140,16 @@ if not st.session_state.get("autenticado"):
 
         st.markdown("<p style='text-align:center; font-family:Nunito; color:#666; font-weight:700; font-size:1.05rem; margin-bottom:15px;'>Selecciona tu método de ingreso:</p>", unsafe_allow_html=True)
 
-        if st.button("Continuar con Google", key="btn_g", use_container_width=True):
-            st.session_state["autenticado"] = True
-            st.session_state["proveedor_auth"] = "Google"
-            st.rerun()
+        supabase_url = st.secrets.get("SUPABASE_URL", "https://oonkwgfawfyqtrndshhu.supabase.co")
 
-        if st.button("Continuar con GitHub", key="btn_gh", use_container_width=True):
-            st.session_state["autenticado"] = True
-            st.session_state["proveedor_auth"] = "GitHub"
-            st.rerun()
+        # URLs reales de OAuth de Supabase para cada proveedor
+        url_google = f"{supabase_url}/auth/v1/authorize?provider=google&redirect_to=https://css-spa.streamlit.app/"
+        url_github = f"{supabase_url}/auth/v1/authorize?provider=github&redirect_to=https://css-spa.streamlit.app/"
+        url_facebook = f"{supabase_url}/auth/v1/authorize?provider=facebook&redirect_to=https://css-spa.streamlit.app/"
 
-        if st.button("Continuar con Facebook", key="btn_fb", use_container_width=True):
-            st.session_state["autenticado"] = True
-            st.session_state["proveedor_auth"] = "Facebook"
-            st.rerun()
+        st.link_button("Continuar con Google", url_google, use_container_width=True)
+        st.link_button("Continuar con GitHub", url_github, use_container_width=True)
+        st.link_button("Continuar con Facebook", url_facebook, use_container_width=True)
 
         if clave_requerida:
             st.markdown("---")
