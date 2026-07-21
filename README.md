@@ -1,16 +1,19 @@
 <p align="center">
-  <img src="assets/icon.png" width="140" alt="HuntJob Chile Logo">
+  <a href="https://cumsille.tech"><img src="assets/css_logo.png" width="160" alt="Cumsille Systems Suite Logo"></a>
+  <br>
+  <img src="assets/icon.png" width="90" alt="HuntJob Chile Logo">
 </p>
 
 <h1 align="center">HuntJob Chile</h1>
 <p align="center">
-  <b>Plataforma Inteligente de Empleos & Auditoría ATS</b>
+  <b>Plataforma Inteligente de Empleos & Auditoría ATS</b><br>
+  <sub>Un desarrollo oficial de <a href="https://cumsille.tech"><b>Cumsille Systems Suite SpA</b></a></sub>
 </p>
 
 <p align="center">
   <a href="https://huntjob.cumsille.me"><img src="https://img.shields.io/badge/Sitio_Web-huntjob.cumsille.me-blue?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Sitio Web"></a>
+  <a href="https://cumsille.tech"><img src="https://img.shields.io/badge/Ecosistema-cumsille.tech-purple?style=for-the-badge&logo=opsgenie&logoColor=white" alt="Cumsille Tech"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"></a>
-  <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License"></a>
 </p>
 
@@ -139,6 +142,7 @@ Esto creará el acceso directo en el menú de tu sistema con la ventana nativa (
 
 ## 📄 Licencia & Créditos
 
-Desarrollado con ❤️ por Alejandro Cumsille para impulsar el talento en Chile.  
+Desarrollado con ❤️ por **Alejandro Cumsille** como parte del ecosistema tecnológico de **[Cumsille Systems Suite SpA](https://cumsille.tech)**.  
 Distribuido bajo la **Licencia MIT**.  
-Sitio Oficial: [https://huntjob.cumsille.me](https://huntjob.cumsille.me)
+- **Aplicación Web:** [https://huntjob.cumsille.me](https://huntjob.cumsille.me)  
+- **Sitio Corporativo:** [https://cumsille.tech](https://cumsille.tech)
