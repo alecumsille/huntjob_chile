@@ -9,7 +9,7 @@ from core.generador_pdf import generar_pdf, sanear_nombre_archivo
 from core.portales import PORTALES, buscar_en_todos
 from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY
 
-st.set_page_config(page_title="HuntJob Chile", page_icon=":material/work:", layout="wide")
+st.set_page_config(page_title="HuntJob Chile", page_icon="assets/icon.png", layout="wide")
 
 
 def _clave_configurada() -> str:
@@ -86,7 +86,7 @@ os.makedirs(CARPETA_SALIDA, exist_ok=True)
 with st.sidebar:
     seccion = st.radio(
         "Panel",
-        ["Generador por URL", "Buscador de Vacantes", "Mi Perfil", "Preguntas de Postulación"],
+        ["Generador por URL", "Buscador de Vacantes", "Mi Perfil", "Preguntas de Postulación", "FAQ"],
     )
     st.caption("HuntJob Chile")
 
@@ -403,3 +403,56 @@ elif seccion == "Preguntas de Postulación":
             st.success("Respuesta sugerida", icon=":material/check_circle:")
             st.text_area("Respuesta (copiá esto al formulario real)", value=resultado["respuesta"], height=100)
             st.caption(resultado["justificacion"])
+
+# -------------------------------------------------------------
+# SECCIÓN 5: FAQ
+# -------------------------------------------------------------
+elif seccion == "FAQ":
+    st.subheader("Preguntas frecuentes")
+    st.caption("Qué es HuntJob Chile, explicado como si te lo contara en el ascensor.")
+
+    with st.container(border=True):
+        st.markdown("#### ¿Qué es HuntJob Chile?")
+        st.write(
+            "Una app personal (no un producto para vender) que te ayuda a postular a "
+            "trabajos en Chile más rápido y con mejor calidad, usando IA de verdad — no "
+            "plantillas genéricas."
+        )
+
+    with st.container(border=True):
+        st.markdown("#### ¿Qué hace exactamente?")
+        st.markdown(
+            "- **Genera tu CV y Cover Letter** a partir del link de una oferta real — "
+            "pegás la URL, la IA lee la oferta y redacta un extracto adaptado a ese "
+            "puesto puntual, usando tu perfil real (tu stack, tus logros), no inventado.\n"
+            "- **Busca vacantes** en varios portales chilenos a la vez (Computrabajo, "
+            "ChileTrabajos) desde un solo lugar.\n"
+            "- **Te dice qué tan buen match** es cada oferta contra tu perfil — un score "
+            "y por qué, para no perder tiempo postulando a algo que no calza.\n"
+            "- **Te ayuda con las preguntas raras del formulario** de postulación "
+            "(incluso las de opción múltiple), sugiriendo una respuesta que después vos "
+            "copiás manualmente."
+        )
+
+    with st.container(border=True):
+        st.markdown("#### ¿Mis datos quedan seguros?")
+        st.write(
+            "Tu perfil (nombre, experiencia, logros) se guarda solo en tu propia máquina "
+            "o tu cuenta de Streamlit — nunca se sube al repositorio de GitHub, y la app "
+            "nunca completa ni envía nada por su cuenta en un formulario real."
+        )
+
+    with st.container(border=True):
+        st.markdown("#### ¿Corre en mi computador o en internet?")
+        st.write(
+            "Las dos formas: instalable como app de escritorio en Linux (con su propio "
+            "ícono en el menú de aplicaciones), o como app web si la desplegás en "
+            "Streamlit Community Cloud."
+        )
+
+    with st.container(border=True):
+        st.markdown("#### ¿Por qué cambian los colores de la app?")
+        st.write(
+            "Un detalle personal: la paleta pastel rota entre 4 variantes según la hora "
+            "del día. No cambia nada funcional — es solo para que se sienta viva."
+        )
