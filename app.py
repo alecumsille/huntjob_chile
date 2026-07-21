@@ -4,7 +4,7 @@ from datetime import datetime
 import streamlit as st
 
 from core.scraper_web import extraer_texto_url, ErrorScraping
-from core.motor_ia import generar_texto, ErrorIA
+from core.motor_ia import generar_texto, analizar_match, ErrorIA
 from core.generador_pdf import generar_pdf, sanear_nombre_archivo
 from core.portales import PORTALES, buscar_en_todos
 from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY
@@ -215,6 +215,13 @@ elif seccion == "Buscador de Vacantes":
     nombres_portales = [portal["nombre"] for portal in PORTALES.values()]
     id_por_nombre = {portal["nombre"]: portal_id for portal_id, portal in PORTALES.items()}
 
+    if "resultados_busqueda" not in st.session_state:
+        st.session_state.resultados_busqueda = []
+    if "errores_busqueda" not in st.session_state:
+        st.session_state.errores_busqueda = []
+    if "matches" not in st.session_state:
+        st.session_state.matches = {}
+
     columna_filtros, columna_resultados = st.columns([1, 3])
 
     with columna_filtros:
@@ -230,34 +237,61 @@ elif seccion == "Buscador de Vacantes":
             portales_marcados = [id_por_nombre[nombre] for nombre in portales_elegidos]
             buscar = st.button("Buscar ofertas", icon=":material/search:", type="primary")
 
+    if buscar:
+        if not portales_marcados:
+            st.error("Marca al menos un portal para buscar.", icon=":material/error:")
+            st.stop()
+
+        with st.spinner(f"Consultando {len(portales_marcados)} portal(es) para '{palabra_clave}'..."):
+            resultados, errores = buscar_en_todos(palabra_clave, cantidad_paginas, portales_marcados)
+
+        st.session_state.resultados_busqueda = resultados
+        st.session_state.errores_busqueda = errores
+        st.session_state.matches = {}
+
     with columna_resultados:
-        if buscar:
-            if not portales_marcados:
-                st.error("Marca al menos un portal para buscar.", icon=":material/error:")
-                st.stop()
+        for error in st.session_state.errores_busqueda:
+            st.warning(f"No se pudo buscar en {error}", icon=":material/warning:")
 
-            with st.spinner(f"Consultando {len(portales_marcados)} portal(es) para '{palabra_clave}'..."):
-                resultados, errores = buscar_en_todos(palabra_clave, cantidad_paginas, portales_marcados)
-
-            for error in errores:
-                st.warning(f"No se pudo buscar en {error}", icon=":material/warning:")
-
-            if not resultados:
+        if not st.session_state.resultados_busqueda:
+            if buscar:
                 st.info("No se encontraron ofertas para esa palabra clave en los portales seleccionados.")
-            else:
-                st.success(f"Se encontraron {len(resultados)} vacantes.", icon=":material/check_circle:")
-                for oferta in resultados:
-                    with st.container(border=True):
-                        st.markdown(f"#### {oferta['titulo']}")
-                        st.caption(f"{oferta['empresa']} — {oferta['ubicacion']}")
-                        with st.container(horizontal=True, vertical_alignment="center"):
-                            st.badge(oferta["fuente"], icon=":material/travel_explore:", color="gray")
-                            if oferta.get("modalidad"):
-                                st.badge(oferta["modalidad"], icon=":material/home_work:", color="blue")
-                            if oferta.get("publicado"):
-                                st.caption(oferta["publicado"])
-                        if oferta["link"]:
-                            st.link_button("Ver oferta", oferta["link"], icon=":material/open_in_new:")
+        else:
+            st.success(f"Se encontraron {len(st.session_state.resultados_busqueda)} vacantes.", icon=":material/check_circle:")
+            perfil_para_match = cargar_perfil()
+
+            for oferta in st.session_state.resultados_busqueda:
+                with st.container(border=True):
+                    st.markdown(f"#### {oferta['titulo']}")
+                    st.caption(f"{oferta['empresa']} — {oferta['ubicacion']}")
+                    with st.container(horizontal=True, vertical_alignment="center"):
+                        st.badge(oferta["fuente"], icon=":material/travel_explore:", color="gray")
+                        if oferta.get("modalidad"):
+                            st.badge(oferta["modalidad"], icon=":material/home_work:", color="blue")
+                        if oferta.get("publicado"):
+                            st.caption(oferta["publicado"])
+                    if oferta["link"]:
+                        st.link_button("Ver oferta", oferta["link"], icon=":material/open_in_new:")
+
+                    match = st.session_state.matches.get(oferta["link"])
+                    if match:
+                        color_score = "green" if match["score"] >= 70 else "yellow" if match["score"] >= 40 else "red"
+                        st.badge(f"Match: {match['score']}/100", icon=":material/insights:", color=color_score)
+                        st.caption(match["explicacion"])
+                    elif oferta["link"] and st.button(
+                        "Analizar match", icon=":material/insights:", key=f"match_{oferta['link']}"
+                    ):
+                        with st.spinner("Analizando match con tu perfil..."):
+                            try:
+                                texto_oferta = extraer_texto_url(oferta["link"])
+                                st.session_state.matches[oferta["link"]] = analizar_match(
+                                    texto_oferta, perfil_para_match
+                                )
+                                st.rerun()
+                            except ErrorScraping as e:
+                                st.error(f"No se pudo leer la oferta: {e}", icon=":material/error:")
+                            except ErrorIA as e:
+                                st.error(f"Fallo en la capa de IA: {e}", icon=":material/error:")
 
 # -------------------------------------------------------------
 # SECCIÓN 3: MI PERFIL
