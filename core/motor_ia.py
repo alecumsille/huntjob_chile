@@ -61,8 +61,10 @@ def _llamar_gemini(prompt: str, response_mime_type: str | None = None, response_
     except Exception as e:
         raise ErrorIA(f"Conexión con Gemini falló: {e}")
 
+    if res.status_code == 429:
+        raise ErrorIA("El servicio de IA superó el límite de consultas por minuto. Espera 1 minuto y vuelve a presionar el botón.")
     if res.status_code != 200:
-        raise ErrorIA(f"Gemini respondió {res.status_code}: {res.text[:150]}")
+        raise ErrorIA(f"Servicio de IA no disponible ({res.status_code}). Intenta en un momento.")
 
     cuerpo = res.json()
     try:
