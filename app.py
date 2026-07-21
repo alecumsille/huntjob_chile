@@ -260,7 +260,7 @@ elif seccion == "Buscador de Vacantes":
             st.success(f"Se encontraron {len(st.session_state.resultados_busqueda)} vacantes.", icon=":material/check_circle:")
             perfil_para_match = cargar_perfil()
 
-            for oferta in st.session_state.resultados_busqueda:
+            for indice, oferta in enumerate(st.session_state.resultados_busqueda):
                 with st.container(border=True):
                     st.markdown(f"#### {oferta['titulo']}")
                     st.caption(f"{oferta['empresa']} — {oferta['ubicacion']}")
@@ -271,7 +271,9 @@ elif seccion == "Buscador de Vacantes":
                         if oferta.get("publicado"):
                             st.caption(oferta["publicado"])
                     if oferta["link"]:
-                        st.link_button("Ver oferta", oferta["link"], icon=":material/open_in_new:")
+                        st.link_button(
+                            "Ver oferta", oferta["link"], icon=":material/open_in_new:", key=f"ver_oferta_{indice}"
+                        )
 
                     match = st.session_state.matches.get(oferta["link"])
                     if match:
@@ -279,7 +281,7 @@ elif seccion == "Buscador de Vacantes":
                         st.badge(f"Match: {match['score']}/100", icon=":material/insights:", color=color_score)
                         st.caption(match["explicacion"])
                     elif oferta["link"] and st.button(
-                        "Analizar match", icon=":material/insights:", key=f"match_{oferta['link']}"
+                        "Analizar match", icon=":material/insights:", key=f"match_{indice}"
                     ):
                         with st.spinner("Analizando match con tu perfil..."):
                             try:
