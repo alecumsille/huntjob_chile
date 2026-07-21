@@ -4,7 +4,7 @@ from datetime import datetime
 import streamlit as st
 
 from core.scraper_web import extraer_texto_url, ErrorScraping
-from core.motor_ia import generar_texto, analizar_match, ErrorIA
+from core.motor_ia import generar_texto, analizar_match, sugerir_respuesta, ErrorIA
 from core.generador_pdf import generar_pdf, sanear_nombre_archivo
 from core.portales import PORTALES, buscar_en_todos
 from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY
@@ -86,7 +86,7 @@ os.makedirs(CARPETA_SALIDA, exist_ok=True)
 with st.sidebar:
     seccion = st.radio(
         "Panel",
-        ["Generador por URL", "Buscador de Vacantes", "Mi Perfil"],
+        ["Generador por URL", "Buscador de Vacantes", "Mi Perfil", "Preguntas de Postulación"],
     )
     st.caption("HuntJob Chile")
 
@@ -345,3 +345,43 @@ elif seccion == "Mi Perfil":
                 "logros_y_experiencia": logros_y_experiencia,
             })
             st.success("Perfil guardado.", icon=":material/check_circle:")
+
+# -------------------------------------------------------------
+# SECCIÓN 4: PREGUNTAS DE POSTULACIÓN
+# -------------------------------------------------------------
+elif seccion == "Preguntas de Postulación":
+    st.subheader("Asistente de respuestas para formularios de postulación")
+    st.caption(
+        "Pegá la pregunta tal cual aparece en el formulario real (y las alternativas, "
+        "si es de opción múltiple). La respuesta sugerida es para copiar manualmente — "
+        "la app nunca completa ni envía nada en un formulario real."
+    )
+
+    with st.container(border=True):
+        pregunta = st.text_area("Pregunta del formulario")
+        opciones_texto = st.text_input(
+            "Alternativas (separadas por coma, dejar vacío si es respuesta libre)"
+        )
+
+        if st.button("Sugerir respuesta", icon=":material/lightbulb:", type="primary"):
+            if not pregunta.strip():
+                st.error("Pegá la pregunta del formulario primero.", icon=":material/error:")
+                st.stop()
+
+            opciones = (
+                [opcion.strip() for opcion in opciones_texto.split(",") if opcion.strip()]
+                if opciones_texto.strip()
+                else None
+            )
+
+            with st.spinner("Pensando la mejor respuesta..."):
+                try:
+                    perfil_para_pregunta = cargar_perfil()
+                    resultado = sugerir_respuesta(pregunta, perfil_para_pregunta, opciones=opciones)
+                except ErrorIA as e:
+                    st.error(f"Fallo en la capa de IA: {e}", icon=":material/error:")
+                    st.stop()
+
+            st.success("Respuesta sugerida", icon=":material/check_circle:")
+            st.text_area("Respuesta (copiá esto al formulario real)", value=resultado["respuesta"], height=100)
+            st.caption(resultado["justificacion"])
