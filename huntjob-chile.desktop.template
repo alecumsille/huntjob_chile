@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=HuntJob Chile
+Comment=Motor de postulaciones con IA: extraccion de ofertas, generacion de CV/Cover Letter y busqueda multi-portal
+Exec=RUTA_PROYECTO/venv/bin/python3 RUTA_PROYECTO/desktop.py
+Icon=RUTA_PROYECTO/assets/icon.png
+Terminal=false
+Categories=Office;
+StartupWMClass=HuntJob Chile

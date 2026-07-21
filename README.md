@@ -26,6 +26,33 @@ streamlit run app.py
 
 `GEMINI_API_KEY` tiene que estar exportada en la sesión de terminal donde corre `streamlit run app.py` (o agregada al `.bashrc`/`.zshrc` para que persista). Sin esa variable, la sección "Generador por URL" falla con un mensaje explícito indicando cómo conseguirla — el buscador de vacantes no depende de ella y sigue funcionando igual.
 
+## App de escritorio (Linux)
+
+Probado en Linux Mint 22 (base Ubuntu/Debian). Abre la app en una ventana
+nativa propia (GTK/WebKit) en vez de una pestaña del navegador, con un
+lanzador en el menú de aplicaciones.
+
+```bash
+./instalar_escritorio.sh
+```
+
+Esto instala las dependencias del sistema que hagan falta (`python3-gi`,
+GTK, WebKit2 — necesarias para la ventana nativa, no se pueden instalar
+solo con `pip`), ajusta el entorno virtual para que pueda verlas, instala
+`pywebview`, y agrega "HuntJob Chile" al menú de aplicaciones con su
+propio ícono (`assets/icon.png`). Si `GEMINI_API_KEY` no está exportada,
+la app de escritorio la busca automáticamente en `~/.gemini_key`.
+
+También se puede correr directo sin pasar por el menú:
+
+```bash
+source venv/bin/activate
+python3 desktop.py
+```
+
+Cerrar la ventana (o matar el proceso) termina el servidor de Streamlit
+que corre por detrás — no queda nada corriendo en segundo plano.
+
 ## Portales soportados
 
 | Portal | Método |
@@ -41,7 +68,12 @@ Laborum, Indeed Chile y GetOnBrd se investigaron pero quedaron fuera de esta ver
 
 ```
 huntjob_chile/
-├── app.py                  # Interfaz Streamlit
+├── app.py                          # Interfaz Streamlit
+├── desktop.py                      # Envoltorio de escritorio (ventana nativa GTK/WebKit)
+├── instalar_escritorio.sh          # Instalador del lanzador de escritorio
+├── huntjob-chile.desktop.template  # Plantilla del lanzador (.desktop)
+├── assets/
+│   └── icon.png                    # Ícono de la app de escritorio
 ├── core/
 │   ├── scraper_web.py      # Extracción de oferta puntual + búsqueda por portal
 │   ├── portales.py         # Dispatcher multi-portal (registro + búsqueda agregada)
