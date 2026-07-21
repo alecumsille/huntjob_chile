@@ -107,38 +107,9 @@ if not st.session_state.get("autenticado"):
         gh_b64 = _social_icon_b64("github")
         fb_b64 = _social_icon_b64("facebook")
 
-        st.markdown(
-            f"""
-            <style>
-            div.stButton button {{
-                height: 48px !important;
-                border-radius: 12px !important;
-                font-family: 'Quicksand', sans-serif !important;
-                font-weight: 700 !important;
-                font-size: 1rem !important;
-                transition: all 0.2s ease !important;
-            }}
-            div.stButton button[key="btn_g"] {{
-                background-color: #FFFFFF !important;
-                color: #3C4043 !important;
-                border: 1px solid #DADCE0 !important;
-            }}
-            div.stButton button[key="btn_gh"] {{
-                background-color: #24292E !important;
-                color: #FFFFFF !important;
-                border: 1px solid #24292E !important;
-            }}
-            div.stButton button[key="btn_fb"] {{
-                background-color: #1877F2 !important;
-                color: #FFFFFF !important;
-                border: 1px solid #1877F2 !important;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-
-        st.markdown("<p style='text-align:center; font-family:Nunito; color:#666; font-weight:700; font-size:1.05rem; margin-bottom:15px;'>Selecciona tu método de ingreso:</p>", unsafe_allow_html=True)
+        g_b64 = _social_icon_b64("google")
+        gh_b64 = _social_icon_b64("github")
+        fb_b64 = _social_icon_b64("facebook")
 
         supabase_url = st.secrets.get("SUPABASE_URL", "https://oonkwgfawfyqtrndshhu.supabase.co")
 
@@ -147,9 +118,82 @@ if not st.session_state.get("autenticado"):
         url_github = f"{supabase_url}/auth/v1/authorize?provider=github&redirect_to=https://css-spa.streamlit.app/"
         url_facebook = f"{supabase_url}/auth/v1/authorize?provider=facebook&redirect_to=https://css-spa.streamlit.app/"
 
-        st.link_button("Continuar con Google", url_google, use_container_width=True)
-        st.link_button("Continuar con GitHub", url_github, use_container_width=True)
-        st.link_button("Continuar con Facebook", url_facebook, use_container_width=True)
+        st.markdown(
+            f"""
+            <style>
+            .social-btn-link {{
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 14px !important;
+                width: 100% !important;
+                height: 52px !important;
+                border-radius: 12px !important;
+                font-family: 'Quicksand', sans-serif !important;
+                font-weight: 700 !important;
+                font-size: 1.05rem !important;
+                text-decoration: none !important;
+                transition: all 0.2s ease-in-out !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important;
+                margin-bottom: 14px !important;
+                box-sizing: border-box !important;
+            }}
+            .btn-g-style {{
+                background-color: #FFFFFF !important;
+                color: #3C4043 !important;
+                border: 1.5px solid #DADCE0 !important;
+            }}
+            .btn-g-style:hover {{
+                background-color: #F8F9FA !important;
+                border-color: #C6C8CC !important;
+                box-shadow: 0 6px 18px rgba(0,0,0,0.1) !important;
+                transform: translateY(-1px);
+            }}
+            .btn-gh-style {{
+                background-color: #24292E !important;
+                color: #FFFFFF !important;
+                border: 1.5px solid #24292E !important;
+            }}
+            .btn-gh-style:hover {{
+                background-color: #1B1F23 !important;
+                box-shadow: 0 6px 18px rgba(36,41,46,0.3) !important;
+                transform: translateY(-1px);
+            }}
+            .btn-fb-style {{
+                background-color: #1877F2 !important;
+                color: #FFFFFF !important;
+                border: 1.5px solid #1877F2 !important;
+            }}
+            .btn-fb-style:hover {{
+                background-color: #166FE5 !important;
+                box-shadow: 0 6px 18px rgba(24,119,242,0.3) !important;
+                transform: translateY(-1px);
+            }}
+            .icon-img {{
+                width: 24px !important;
+                height: 24px !important;
+                object-fit: contain !important;
+                flex-shrink: 0 !important;
+            }}
+            </style>
+
+            <a href="{url_google}" class="social-btn-link btn-g-style" target="_self">
+                <img src="data:image/png;base64,{g_b64}" class="icon-img" alt="Google">
+                <span>Continuar con Google</span>
+            </a>
+
+            <a href="{url_github}" class="social-btn-link btn-gh-style" target="_self">
+                <img src="data:image/png;base64,{gh_b64}" class="icon-img" alt="GitHub">
+                <span>Continuar con GitHub</span>
+            </a>
+
+            <a href="{url_facebook}" class="social-btn-link btn-fb-style" target="_self">
+                <img src="data:image/png;base64,{fb_b64}" class="icon-img" alt="Facebook">
+                <span>Continuar con Facebook</span>
+            </a>
+            """,
+            unsafe_allow_html=True
+        )
 
         if clave_requerida:
             st.markdown("---")
