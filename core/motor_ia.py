@@ -1,18 +1,24 @@
 """
-Módulo de generación de texto vía Gemini (Google AI). Sin fallback
-silencioso entre modelos: si la API falla, se lanza una excepción clara
-indicando la causa real (key faltante, error de la API, timeout), en vez
-de devolver texto simulado.
+Módulo de generación de texto vía Gemini (Google AI) con fallback transparente
+hacia Groq (Llama 3.3 70B). Si Gemini falla por cuota (429) o conectividad,
+la app intenta automáticamente con Groq si está configurada la GROQ_API_KEY.
 """
 
 import json
 import os
+import time
 import requests
 
 from core.perfil import formatear_perfil
 
-URL_API = "https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent"
-MODELO = "gemini-2.0-flash-lite"
+# Configuración Gemini
+URL_GEMINI = "https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent"
+MODELO_GEMINI = "gemini-2.0-flash-lite"
+
+# Configuración Groq (OpenAI-compatible API)
+URL_GROQ = "https://api.groq.com/openai/v1/chat/completions"
+MODELO_GROQ = "llama-3.3-70b-versatile"
+
 TIMEOUT_SEGUNDOS = 30
 LIMITE_CARACTERES_CONTEXTO = 10000
 
@@ -22,205 +28,163 @@ class ErrorIA(Exception):
     pass
 
 
-def _obtener_api_key() -> str:
-    """
-    Busca la key primero en la variable de entorno GEMINI_API_KEY (uso
-    local / app de escritorio), y si no está, en st.secrets (necesario en
-    Streamlit Community Cloud, que no inyecta secrets como variables de
-    entorno). Se importa streamlit acá adentro para no acoplar este
-    módulo a Streamlit cuando no hace falta.
-    """
-    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
-    if not api_key:
+def _obtener_key(nombre_var: str) -> str:
+    """Busca una API key en env vars o en st.secrets si está en Streamlit Cloud."""
+    key = os.environ.get(nombre_var, "").strip()
+    if not key:
         try:
             import streamlit as st
-            api_key = st.secrets.get("GEMINI_API_KEY", "").strip()
+            key = st.secrets.get(nombre_var, "").strip()
         except Exception:
-            api_key = ""
+            key = ""
+    return key
 
+
+def _llamar_gemini(prompt: str, response_mime_type: str | None = None, response_schema: dict | None = None) -> str:
+    api_key = _obtener_key("GEMINI_API_KEY")
     if not api_key:
-        raise ErrorIA(
-            "Falta GEMINI_API_KEY. Consigue una key gratis en "
-            "https://aistudio.google.com/apikey y expórtala antes de correr "
-            "la app (export GEMINI_API_KEY=tu-key) o configúrala en "
-            "st.secrets si corre en Streamlit Community Cloud."
-        )
-    return api_key
+        raise ErrorIA("Falta GEMINI_API_KEY.")
+
+    url = URL_GEMINI.format(modelo=MODELO_GEMINI)
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+
+    gen_config = {}
+    if response_mime_type:
+        gen_config["responseMimeType"] = response_mime_type
+    if response_schema:
+        gen_config["responseSchema"] = response_schema
+    if gen_config:
+        payload["generationConfig"] = gen_config
+
+    try:
+        res = requests.post(url, params={"key": api_key}, json=payload, timeout=TIMEOUT_SEGUNDOS)
+    except Exception as e:
+        raise ErrorIA(f"Conexión con Gemini falló: {e}")
+
+    if res.status_code != 200:
+        raise ErrorIA(f"Gemini respondió {res.status_code}: {res.text[:150]}")
+
+    cuerpo = res.json()
+    try:
+        return cuerpo["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except (KeyError, IndexError):
+        raise ErrorIA("Gemini respondió sin contenido.")
+
+
+def _llamar_groq(prompt: str, json_mode: bool = False) -> str:
+    api_key = _obtener_key("GROQ_API_KEY")
+    if not api_key:
+        raise ErrorIA("Falta GROQ_API_KEY.")
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": MODELO_GROQ,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.3
+    }
+    if json_mode:
+        payload["response_format"] = {"type": "json_object"}
+
+    try:
+        res = requests.post(URL_GROQ, headers=headers, json=payload, timeout=TIMEOUT_SEGUNDOS)
+    except Exception as e:
+        raise ErrorIA(f"Conexión con Groq falló: {e}")
+
+    if res.status_code != 200:
+        raise ErrorIA(f"Groq respondió {res.status_code}: {res.text[:150]}")
+
+    cuerpo = res.json()
+    try:
+        return cuerpo["choices"][0]["message"]["content"].strip()
+    except (KeyError, IndexError):
+        raise ErrorIA("Groq respondió sin contenido.")
+
+
+def _ejecutar_con_fallback(prompt: str, response_mime_type: str | None = None, response_schema: dict | None = None) -> str:
+    """Intenta primero con Gemini. Si falla (por cuota 429 u otro error) e intenta con Groq."""
+    errores = []
+
+    # 1. Intentar Gemini
+    try:
+        return _llamar_gemini(prompt, response_mime_type, response_schema)
+    except ErrorIA as e:
+        errores.append(f"Gemini: {e}")
+
+    # 2. Intentar Groq como respaldo si está disponible
+    if _obtener_key("GROQ_API_KEY"):
+        json_mode = (response_mime_type == "application/json")
+        try:
+            return _llamar_groq(prompt, json_mode=json_mode)
+        except ErrorIA as e:
+            errores.append(f"Groq: {e}")
+
+    # Si ninguno funcionó
+    if not _obtener_key("GEMINI_API_KEY") and not _obtener_key("GROQ_API_KEY"):
+        raise ErrorIA("Falta configurar GEMINI_API_KEY o GROQ_API_KEY en st.secrets.")
+
+    raise ErrorIA(f"No se pudo completar la solicitud con IA. Detalle: {' | '.join(errores)}")
 
 
 def generar_texto(prompt_sistema: str, texto_base: str) -> str:
-    """
-    Envía un prompt a Gemini y devuelve la respuesta generada. Lanza
-    ErrorIA con el detalle exacto si algo falla — no hay reintento
-    silencioso con otros modelos.
-    """
-    api_key = _obtener_api_key()
-
     prompt_completo = f"{prompt_sistema}\n\nTexto de referencia:\n{texto_base[:LIMITE_CARACTERES_CONTEXTO]}"
-    payload = {"contents": [{"parts": [{"text": prompt_completo}]}]}
-    url = URL_API.format(modelo=MODELO)
-
-    try:
-        respuesta = requests.post(
-            url, params={"key": api_key}, json=payload, timeout=TIMEOUT_SEGUNDOS
-        )
-    except requests.exceptions.Timeout:
-        raise ErrorIA(f"Gemini no respondió en {TIMEOUT_SEGUNDOS}s.")
-    except requests.exceptions.ConnectionError as e:
-        raise ErrorIA(f"Se perdió la conexión con Gemini: {e}")
-
-    if respuesta.status_code != 200:
-        raise ErrorIA(f"Gemini devolvió código {respuesta.status_code}: {respuesta.text[:200]}")
-
-    cuerpo = respuesta.json()
-    try:
-        texto_generado = cuerpo["candidates"][0]["content"]["parts"][0]["text"].strip()
-    except (KeyError, IndexError):
-        raise ErrorIA(f"Gemini respondió sin contenido generado: {cuerpo}")
-
-    if not texto_generado:
-        raise ErrorIA("Gemini respondió con texto vacío. Revisa el prompt.")
-
-    return texto_generado
+    return _ejecutar_con_fallback(prompt_completo)
 
 
 def analizar_match(texto_oferta: str, perfil: dict) -> dict:
-    """
-    Compara el perfil del usuario contra una oferta real y devuelve un
-    score 0-100 + explicación breve, vía respuesta JSON estructurada de
-    Gemini (más confiable que parsear texto libre con regex). Lanza
-    ErrorIA con el detalle exacto si algo falla.
-    """
-    api_key = _obtener_api_key()
-
     contexto_perfil = formatear_perfil(perfil)
     prompt = (
-        "Compara el perfil del candidato contra la oferta laboral. Da un score de 0 "
-        "a 100 de qué tan buen match es, y una explicación breve (2 a 3 líneas) de "
-        "por qué, mencionando fortalezas y posibles brechas (ej. años de experiencia "
-        "insuficientes, tecnologías del stack que la oferta pide y el candidato no "
-        "menciona).\n\n"
+        "Compara el perfil del candidato contra la oferta laboral. Responde ÚNICAMENTE un objeto JSON válido "
+        "con las llaves \"score\" (entero de 0 a 100) y \"explicacion\" (string de 2 a 3 líneas con fortalezas y brechas).\n\n"
         f"Perfil del candidato:\n{contexto_perfil}\n\n"
         f"Oferta laboral:\n{texto_oferta[:LIMITE_CARACTERES_CONTEXTO]}"
     )
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "responseMimeType": "application/json",
-            "responseSchema": {
-                "type": "OBJECT",
-                "properties": {
-                    "score": {"type": "INTEGER"},
-                    "explicacion": {"type": "STRING"},
-                },
-                "required": ["score", "explicacion"],
-            },
+    schema = {
+        "type": "OBJECT",
+        "properties": {
+            "score": {"type": "INTEGER"},
+            "explicacion": {"type": "STRING"},
         },
+        "required": ["score", "explicacion"],
     }
-    url = URL_API.format(modelo=MODELO)
-
+    
+    texto_res = _ejecutar_con_fallback(prompt, response_mime_type="application/json", response_schema=schema)
     try:
-        respuesta = requests.post(
-            url, params={"key": api_key}, json=payload, timeout=TIMEOUT_SEGUNDOS
-        )
-    except requests.exceptions.Timeout:
-        raise ErrorIA(f"Gemini no respondió en {TIMEOUT_SEGUNDOS}s.")
-    except requests.exceptions.ConnectionError as e:
-        raise ErrorIA(f"Se perdió la conexión con Gemini: {e}")
-
-    if respuesta.status_code != 200:
-        raise ErrorIA(f"Gemini devolvió código {respuesta.status_code}: {respuesta.text[:200]}")
-
-    cuerpo = respuesta.json()
-    try:
-        texto_generado = cuerpo["candidates"][0]["content"]["parts"][0]["text"]
-    except (KeyError, IndexError):
-        raise ErrorIA(f"Gemini respondió sin contenido generado: {cuerpo}")
-
-    try:
-        resultado = json.loads(texto_generado)
-    except json.JSONDecodeError:
-        raise ErrorIA(f"Gemini no devolvió JSON válido: {texto_generado[:200]}")
-
-    if "score" not in resultado or "explicacion" not in resultado:
-        raise ErrorIA(f"La respuesta de Gemini no trae score/explicacion: {resultado}")
-
-    try:
+        resultado = json.loads(texto_res)
         return {"score": int(resultado["score"]), "explicacion": str(resultado["explicacion"])}
-    except (ValueError, TypeError):
-        raise ErrorIA(f"El score de Gemini no es un número válido: {resultado}")
+    except Exception as e:
+        raise ErrorIA(f"Error procesando respuesta del análisis de match: {e}")
 
 
 def sugerir_respuesta(pregunta: str, perfil: dict, opciones: list[str] | None = None) -> dict:
-    """
-    Sugiere una respuesta para una pregunta de formulario de postulación,
-    basada en el perfil del usuario. Si se dan opciones (pregunta de
-    opción múltiple), la respuesta queda restringida por schema a ser
-    textualmente una de esas opciones — Gemini nunca puede inventar una
-    alternativa que no esté en la lista. Lanza ErrorIA con el detalle
-    exacto si algo falla.
-    """
-    api_key = _obtener_api_key()
-
     contexto_perfil = formatear_perfil(perfil)
-
-    propiedad_respuesta = {"type": "STRING"}
     instruccion_opciones = ""
     if opciones:
-        propiedad_respuesta["enum"] = opciones
         instruccion_opciones = (
-            f" Debes elegir EXACTAMENTE una de estas alternativas, tal como están "
-            f"escritas: {', '.join(opciones)}."
+            f" Debes elegir EXACTAMENTE una de estas alternativas: {', '.join(opciones)}."
         )
 
     prompt = (
-        "Sos un candidato respondiendo una pregunta de un formulario de postulación "
-        "laboral, usando tu perfil real como base. Da una respuesta corta y directa, "
-        f"lista para copiar en el formulario, y una justificación breve (1 a 2 "
-        f"líneas).{instruccion_opciones}\n\n"
+        "Eres un candidato respondiendo una pregunta de un formulario de postulación. "
+        "Responde ÚNICAMENTE un objeto JSON válido con las llaves \"respuesta\" (string corto) "
+        f"y \"justificacion\" (string de 1 a 2 líneas).{instruccion_opciones}\n\n"
         f"Perfil del candidato:\n{contexto_perfil}\n\n"
-        f"Pregunta del formulario:\n{pregunta}"
+        f"Pregunta:\n{pregunta}"
     )
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "responseMimeType": "application/json",
-            "responseSchema": {
-                "type": "OBJECT",
-                "properties": {
-                    "respuesta": propiedad_respuesta,
-                    "justificacion": {"type": "STRING"},
-                },
-                "required": ["respuesta", "justificacion"],
-            },
+    schema = {
+        "type": "OBJECT",
+        "properties": {
+            "respuesta": {"type": "STRING"},
+            "justificacion": {"type": "STRING"},
         },
+        "required": ["respuesta", "justificacion"],
     }
-    url = URL_API.format(modelo=MODELO)
 
+    texto_res = _ejecutar_con_fallback(prompt, response_mime_type="application/json", response_schema=schema)
     try:
-        respuesta_http = requests.post(
-            url, params={"key": api_key}, json=payload, timeout=TIMEOUT_SEGUNDOS
-        )
-    except requests.exceptions.Timeout:
-        raise ErrorIA(f"Gemini no respondió en {TIMEOUT_SEGUNDOS}s.")
-    except requests.exceptions.ConnectionError as e:
-        raise ErrorIA(f"Se perdió la conexión con Gemini: {e}")
-
-    if respuesta_http.status_code != 200:
-        raise ErrorIA(f"Gemini devolvió código {respuesta_http.status_code}: {respuesta_http.text[:200]}")
-
-    cuerpo = respuesta_http.json()
-    try:
-        texto_generado = cuerpo["candidates"][0]["content"]["parts"][0]["text"]
-    except (KeyError, IndexError):
-        raise ErrorIA(f"Gemini respondió sin contenido generado: {cuerpo}")
-
-    try:
-        resultado = json.loads(texto_generado)
-    except json.JSONDecodeError:
-        raise ErrorIA(f"Gemini no devolvió JSON válido: {texto_generado[:200]}")
-
-    if "respuesta" not in resultado or "justificacion" not in resultado:
-        raise ErrorIA(f"La respuesta de Gemini no trae respuesta/justificacion: {resultado}")
-
-    return {"respuesta": str(resultado["respuesta"]), "justificacion": str(resultado["justificacion"])}
+        resultado = json.loads(texto_res)
+        return {"respuesta": str(resultado["respuesta"]), "justificacion": str(resultado["justificacion"])}
+    except Exception as e:
+        raise ErrorIA(f"Error procesando sugerencia de respuesta: {e}")
