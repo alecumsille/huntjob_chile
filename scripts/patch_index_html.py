@@ -23,6 +23,7 @@ OG_TAGS = """<title>HuntJob Chile</title>
     <meta property="og:title" content="HuntJob Chile — Plataforma Inteligente de Empleos">
     <meta property="og:description" content="Busca ofertas en todos los portales de empleo de Chile y genera tu CV optimizado con IA.">
     <meta property="og:image" content="https://raw.githubusercontent.com/alecumsille/huntjob_chile/main/assets/icon.png">
+    <meta property="fb:app_id" content="1062967339642692">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="HuntJob Chile — Plataforma Inteligente de Empleos">
     <meta name="twitter:description" content="Busca ofertas en todos los portales de empleo de Chile y genera tu CV optimizado con IA.">
