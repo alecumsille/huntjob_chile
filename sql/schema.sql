@@ -83,3 +83,9 @@ create trigger on_auth_user_created
 alter table public.planes_usuario
     add column if not exists flow_customer_id text unique,
     add column if not exists plan_vence_en timestamptz;
+
+-- Guarda el subscriptionId de Flow (no solo el customerId) para poder
+-- llamar subscription/cancel de verdad al cancelar, en vez de solo dejar
+-- de facturar localmente mientras Flow sigue cobrando (2026-07-22).
+alter table public.planes_usuario
+    add column if not exists flow_subscription_id text;

@@ -409,13 +409,38 @@ with st.sidebar:
                     st.warning("¿Seguro? Vas a volver al plan gratuito (5 generaciones/mes).")
                     if st.button("Sí, cancelar", type="primary", use_container_width=True):
                         import requests as _requests
-                        _requests.post(
-                            f"{PAYMENTS_SERVICE_URL}/webhook/flow/subscription-canceled",
-                            data={"customerId": plan.get("flow_customer_id", "")},
-                            timeout=15,
-                        )
-                        st.session_state["confirmar_cancelacion"] = False
-                        st.rerun()
+
+                        try:
+                            respuesta_cancel = _requests.post(
+                                f"{PAYMENTS_SERVICE_URL}/webhook/flow/subscription-canceled",
+                                data={"customerId": plan.get("flow_customer_id", "")},
+                                timeout=15,
+                            )
+                            if respuesta_cancel.status_code != 200:
+                                logger.error(
+                                    "subscription-canceled devolvio status %s: %s",
+                                    respuesta_cancel.status_code,
+                                    respuesta_cancel.text,
+                                )
+                                st.error(
+                                    "No se pudo confirmar la cancelación con el servicio de pagos. "
+                                    "Intenta de nuevo en unos minutos.",
+                                    icon=":material/error:",
+                                )
+                            else:
+                                st.session_state["confirmar_cancelacion"] = False
+                                st.rerun()
+                        except Exception:
+                            # Timeout, conexion caida, etc.: no asumimos que
+                            # la cancelacion funciono solo porque se hizo el
+                            # POST — si esto falla en silencio el usuario
+                            # sigue premium local pero Flow puede seguir
+                            # cobrando igual.
+                            logger.exception("No se pudo llamar a subscription-canceled")
+                            st.error(
+                                "No se pudo cancelar la suscripción. Intenta de nuevo en unos minutos.",
+                                icon=":material/error:",
+                            )
             else:
                 usados = plan["generaciones_este_mes"]
                 limite = plan["limite_mensual"]
