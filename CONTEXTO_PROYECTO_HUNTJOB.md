@@ -1,6 +1,6 @@
 # 📌 CONTEXTO COMPLETO Y HANDOVER TÉCNICO — HUNTJOB CHILE
 
-Este documento contiene toda la arquitectura, credenciales, decisiones técnicas y estado actual de la plataforma **HuntJob Chile** (desarrollada para **Cumsille Systems Suite SpA**). Entrega este archivo a cualquier modelo de IA (Claude, ChatGPT, DeepSeek, Gemini) para continuar el desarrollo sin perder continuidad.
+Este documento contiene toda la arquitectura, credenciales, decisiones técnicas y estado actual de la plataforma **HuntJob Chile** (desarrollada por **Cumsille Systems Suite SpA**). Entrega este archivo a cualquier modelo de IA (Claude, ChatGPT, DeepSeek, Gemini) para continuar el desarrollo sin perder continuidad.
 
 ---
 
