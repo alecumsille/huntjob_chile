@@ -12,6 +12,7 @@ from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY
 from core.postulacion import generar_documentos
 from core.auth_supabase import obtener_usuario_desde_token, cerrar_sesion, SUPABASE_URL
 from core.db import guardar_historial, obtener_historial_reciente, marcar_postulado, verificar_y_consumir_uso, obtener_plan
+from core.flow_checkout import PAYMENTS_SERVICE_URL
 
 st.set_page_config(page_title="HuntJob Chile", page_icon="assets/icon.png", layout="wide")
 
@@ -399,6 +400,19 @@ with st.sidebar:
             plan = obtener_plan(contexto_usuario["user_id"], contexto_usuario["access_token"])
             if plan["plan"] == "premium":
                 st.caption("Plan Premium — generaciones sin límite ✨")
+                if st.button("Cancelar suscripción", use_container_width=True):
+                    st.session_state["confirmar_cancelacion"] = True
+                if st.session_state.get("confirmar_cancelacion"):
+                    st.warning("¿Seguro? Vas a volver al plan gratuito (5 generaciones/mes).")
+                    if st.button("Sí, cancelar", type="primary", use_container_width=True):
+                        import requests as _requests
+                        _requests.post(
+                            f"{PAYMENTS_SERVICE_URL}/webhook/flow/subscription-canceled",
+                            data={"customerId": plan.get("flow_customer_id", "")},
+                            timeout=15,
+                        )
+                        st.session_state["confirmar_cancelacion"] = False
+                        st.rerun()
             else:
                 usados = plan["generaciones_este_mes"]
                 limite = plan["limite_mensual"]
@@ -406,6 +420,15 @@ with st.sidebar:
                     min(usados / limite, 1.0) if limite else 0,
                     text=f"Plan gratuito — {usados}/{limite} generaciones este mes",
                 )
+                if st.button("Actualizar a Premium ($4.990/mes)", type="primary", use_container_width=True):
+                    from core.flow_checkout import iniciar_registro_tarjeta
+
+                    url_pago = iniciar_registro_tarjeta(
+                        user_id=contexto_usuario["user_id"],
+                        nombre=st.session_state.get("user_email", "Usuario"),
+                        email=st.session_state.get("user_email", ""),
+                    )
+                    st.link_button("Ir a pagar con Flow", url_pago, use_container_width=True)
         except Exception:
             pass
     else:
