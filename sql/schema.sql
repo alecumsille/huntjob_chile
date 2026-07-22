@@ -78,3 +78,8 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
     after insert on auth.users
     for each row execute procedure public.handle_new_user();
+
+-- Suscripcion Premium via Flow.cl (2026-07-22)
+alter table public.planes_usuario
+    add column if not exists flow_customer_id text unique,
+    add column if not exists plan_vence_en timestamptz;
