@@ -30,7 +30,7 @@
 - Test: `~/Antigravity/huntjob_payments/tests/test_flow_client.py`
 
 **Interfaces:**
-- Produces: `flow_client.firmar(params: dict) -> str` — devuelve el hash HMAC-SHA256 hex.
+- Produces: `flow_client.firmar(params: dict, secret_key: str) -> str` — devuelve el hash HMAC-SHA256 hex.
 
 - [ ] **Step 1: Crear el repo y la estructura de carpetas**
 
