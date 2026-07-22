@@ -1,4 +1,5 @@
 import base64
+import logging
 import os
 from datetime import datetime
 
@@ -13,6 +14,8 @@ from core.postulacion import generar_documentos
 from core.auth_supabase import obtener_usuario_desde_token, cerrar_sesion, SUPABASE_URL
 from core.db import guardar_historial, obtener_historial_reciente, marcar_postulado, verificar_y_consumir_uso, obtener_plan
 from core.flow_checkout import PAYMENTS_SERVICE_URL
+
+logger = logging.getLogger(__name__)
 
 st.set_page_config(page_title="HuntJob Chile", page_icon="assets/icon.png", layout="wide")
 
@@ -430,11 +433,23 @@ with st.sidebar:
                             email=st.session_state.get("user_email", ""),
                         )
                         st.link_button("Ir a pagar con Flow", url_pago, use_container_width=True)
-                    except Exception as e:
-                        # El error técnico se registra acá y no se le muestra
-                        # crudo al usuario, pero nunca queda en silencio.
+                    except RuntimeError:
+                        # Caso conocido: el usuario ya tiene un cliente Flow registrado
+                        # (ver core/flow_checkout.py). No mostramos el detalle interno,
+                        # solo un mensaje claro para el usuario.
+                        logger.exception("iniciar_registro_tarjeta: cliente Flow ya registrado")
                         st.error(
-                            f"No se pudo iniciar el pago con Flow: {e}",
+                            "Ya tenés una cuenta de pago registrada con nosotros — "
+                            "contáctanos para activar Premium.",
+                            icon=":material/error:",
+                        )
+                    except Exception:
+                        # Error inesperado (red, Flow caído, etc.): se registra el
+                        # detalle real en el log del servidor y al usuario se le
+                        # muestra un mensaje genérico, sin la excepción cruda.
+                        logger.exception("No se pudo iniciar el pago con Flow")
+                        st.error(
+                            "No se pudo iniciar el pago con Flow. Intenta de nuevo en unos minutos.",
                             icon=":material/error:",
                         )
         except Exception:
