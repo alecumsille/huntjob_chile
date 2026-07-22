@@ -29,18 +29,27 @@ OG_TAGS = """<title>HuntJob Chile</title>
     <meta name="twitter:description" content="Busca ofertas en todos los portales de empleo de Chile y genera tu CV optimizado con IA.">
     <meta name="twitter:image" content="https://raw.githubusercontent.com/alecumsille/huntjob_chile/main/assets/icon.png">"""
 
-MARCA = "<title>Streamlit</title>"
+MARCA_TITLE = "<title>Streamlit</title>"
+MARCA_HTML = '<html lang="en">'
+HTML_CON_NAMESPACES = '<html lang="es" xmlns:og="http://ogp.me/ns#" xmlns:fb="http://www.facebook.com/2008/fbml">'
 
 
 def main() -> None:
     html = INDEX_PATH.read_text(encoding="utf-8")
-    if MARCA not in html:
+    if MARCA_TITLE not in html:
         raise RuntimeError(
-            f"No se encontró '{MARCA}' en {INDEX_PATH} — el template de "
+            f"No se encontró '{MARCA_TITLE}' en {INDEX_PATH} — el template de "
             "Streamlit puede haber cambiado en esta versión, revisar antes "
             "de seguir con el build."
         )
-    html = html.replace(MARCA, OG_TAGS)
+    if MARCA_HTML not in html:
+        raise RuntimeError(
+            f"No se encontró '{MARCA_HTML}' en {INDEX_PATH} — el template de "
+            "Streamlit puede haber cambiado en esta versión, revisar antes "
+            "de seguir con el build."
+        )
+    html = html.replace(MARCA_TITLE, OG_TAGS)
+    html = html.replace(MARCA_HTML, HTML_CON_NAMESPACES)
     INDEX_PATH.write_text(html, encoding="utf-8")
     print(f"OK: Open Graph parchado en {INDEX_PATH}")
 
