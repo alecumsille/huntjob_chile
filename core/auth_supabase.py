@@ -8,10 +8,13 @@ automáticamente por auth.uid() sin que el backend necesite privilegios
 de administrador.
 """
 
+import logging
 import os
 
 import streamlit as st
 from supabase import create_client, Client
+
+logger = logging.getLogger(__name__)
 
 
 def _obtener_config(nombre_var: str, valor_defecto: str = "") -> str:
@@ -47,9 +50,11 @@ def obtener_usuario_desde_token(access_token: str) -> dict | None:
     try:
         respuesta = _cliente_base().auth.get_user(access_token)
     except Exception:
+        logger.exception("Fallo al validar access_token contra Supabase Auth")
         return None
     usuario = getattr(respuesta, "user", None)
     if not usuario:
+        logger.warning("Supabase respondio sin 'user' para el access_token recibido")
         return None
     proveedor = (usuario.app_metadata or {}).get("provider", "Cuenta")
     return {"id": usuario.id, "email": usuario.email, "proveedor": proveedor.capitalize()}
