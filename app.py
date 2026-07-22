@@ -86,6 +86,49 @@ def _social_icon_b64(nombre: str) -> str:
     return ""
 
 
+def mostrar_faq() -> None:
+    """Contenido estático de preguntas frecuentes — público, no requiere sesión."""
+    with st.container(border=True):
+        st.markdown("#### ¿Qué es HuntJob Chile?")
+        st.write(
+            "Una app para postular a trabajos en Chile de forma más rápida y efectiva, "
+            "usando inteligencia artificial — sin plantillas genéricas."
+        )
+
+    with st.container(border=True):
+        st.markdown("#### ¿Qué hace exactamente?")
+        st.markdown(
+            "- **Genera tu CV y Cover Letter** desde el link de una oferta real — pegas la URL, "
+            "la IA la lee y redacta un texto adaptado a ese cargo usando tu perfil (tu stack, tus logros).\n"
+            "- **Busca vacantes** en varios portales chilenos al mismo tiempo (Computrabajo, ChileTrabajos).\n"
+            "- **Analiza qué tan buen match** eres para cada oferta — con puntaje y explicación, "
+            "para no perder tiempo en postulaciones que no calzan.\n"
+            "- **Sugiere respuestas para el formulario** de postulación (incluso preguntas de selección múltiple), "
+            "para que tú las copies cuando corresponda."
+        )
+
+    with st.container(border=True):
+        st.markdown("#### ¿Mis datos quedan seguros?")
+        st.write(
+            "Tu información (nombre, experiencia, logros) se guarda solo en tu cuenta — "
+            "nunca en el repositorio de GitHub. La app tampoco envía nada por ti en formularios externos."
+        )
+
+    with st.container(border=True):
+        st.markdown("#### ¿Funciona en mi computador o en internet?")
+        st.write(
+            "Las dos: como app de escritorio en Linux (con ícono en el menú de aplicaciones), "
+            "o como app web alojada en la nube."
+        )
+
+    with st.container(border=True):
+        st.markdown("#### ¿Por qué cambian los colores de la app?")
+        st.write(
+            "Un detalle de diseño: los colores rotan entre 4 paletas pastel según la hora del día. "
+            "Es solo visual, no afecta nada en el funcionamiento."
+        )
+
+
 # Supabase entrega el token en el fragmento de la URL (#access_token=...),
 # que el servidor de Streamlit nunca puede leer — solo el navegador. Este
 # puente en JS lo copia a un query param (?access_token=...) para que el
@@ -183,6 +226,9 @@ if not st.session_state.get("autenticado", False):
             st.session_state["proveedor_auth"] = "Invitado"
             st.rerun()
         st.caption("En modo invitado tu perfil e historial no se guardan — se pierden al cerrar la pestaña.")
+
+    with st.expander("¿Qué es HuntJob Chile? Ver preguntas frecuentes (FAQ)"):
+        mostrar_faq()
 
     st.stop()
 
@@ -849,43 +895,4 @@ elif seccion == "Preguntas de Postulación":
 elif seccion == "FAQ":
     st.subheader("Preguntas frecuentes")
     st.caption("Lo esencial sobre HuntJob Chile, en pocas palabras.")
-
-    with st.container(border=True):
-        st.markdown("#### ¿Qué es HuntJob Chile?")
-        st.write(
-            "Una app para postular a trabajos en Chile de forma más rápida y efectiva, "
-            "usando inteligencia artificial — sin plantillas genéricas."
-        )
-
-    with st.container(border=True):
-        st.markdown("#### ¿Qué hace exactamente?")
-        st.markdown(
-            "- **Genera tu CV y Cover Letter** desde el link de una oferta real — pegas la URL, "
-            "la IA la lee y redacta un texto adaptado a ese cargo usando tu perfil (tu stack, tus logros).\n"
-            "- **Busca vacantes** en varios portales chilenos al mismo tiempo (Computrabajo, ChileTrabajos).\n"
-            "- **Analiza qué tan buen match** eres para cada oferta — con puntaje y explicación, "
-            "para no perder tiempo en postulaciones que no calzan.\n"
-            "- **Sugiere respuestas para el formulario** de postulación (incluso preguntas de selección múltiple), "
-            "para que tú las copies cuando corresponda."
-        )
-
-    with st.container(border=True):
-        st.markdown("#### ¿Mis datos quedan seguros?")
-        st.write(
-            "Tu información (nombre, experiencia, logros) se guarda solo en tu cuenta — "
-            "nunca en el repositorio de GitHub. La app tampoco envía nada por ti en formularios externos."
-        )
-
-    with st.container(border=True):
-        st.markdown("#### ¿Funciona en mi computador o en internet?")
-        st.write(
-            "Las dos: como app de escritorio en Linux (con ícono en el menú de aplicaciones), "
-            "o como app web alojada en la nube."
-        )
-
-    with st.container(border=True):
-        st.markdown("#### ¿Por qué cambian los colores de la app?")
-        st.write(
-            "Un detalle de diseño: los colores rotan entre 4 paletas pastel según la hora del día. "
-            "Es solo visual, no afecta nada en el funcionamiento."
-        )
+    mostrar_faq()
