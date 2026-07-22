@@ -6,12 +6,12 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from core.scraper_web import extraer_texto_url, ErrorScraping
-from core.motor_ia import generar_texto, analizar_match, sugerir_respuesta, ErrorIA
+from core.motor_ia import extraer_cargo_y_empresa, analizar_match, sugerir_respuesta, ErrorIA
 from core.portales import PORTALES, buscar_en_todos
 from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY
 from core.postulacion import generar_documentos
 from core.auth_supabase import obtener_usuario_desde_token, cerrar_sesion, SUPABASE_URL
-from core.db import guardar_historial, marcar_postulado, verificar_y_consumir_uso, obtener_plan
+from core.db import guardar_historial, obtener_historial_reciente, marcar_postulado, verificar_y_consumir_uso, obtener_plan
 
 st.set_page_config(page_title="HuntJob Chile", page_icon="assets/icon.png", layout="wide")
 
@@ -354,7 +354,12 @@ with st.sidebar:
             if plan["plan"] == "premium":
                 st.caption("Plan Premium — generaciones sin límite ✨")
             else:
-                st.caption(f"Plan gratuito — {plan['generaciones_este_mes']}/{plan['limite_mensual']} generaciones usadas este mes")
+                usados = plan["generaciones_este_mes"]
+                limite = plan["limite_mensual"]
+                st.progress(
+                    min(usados / limite, 1.0) if limite else 0,
+                    text=f"Plan gratuito — {usados}/{limite} generaciones este mes",
+                )
         except Exception:
             pass
     else:
@@ -368,7 +373,7 @@ with st.sidebar:
     st.divider()
     seccion = st.radio(
         "Panel",
-        ["Generador por URL", "Buscador de Vacantes", "Mi Perfil", "Preguntas de Postulación", "FAQ"],
+        ["Generador por URL", "Buscador de Vacantes", "Mis Postulaciones", "Mi Perfil", "Preguntas de Postulación", "FAQ"],
     )
     st.caption("HuntJob Chile")
 
@@ -390,6 +395,8 @@ if seccion == "Generador por URL":
         st.session_state.texto_extraido = ""
     if "puesto_detectado" not in st.session_state:
         st.session_state.puesto_detectado = ""
+    if "empresa_detectada" not in st.session_state:
+        st.session_state.empresa_detectada = ""
 
     with st.container(border=True):
         url_oferta = st.text_input("Link de la oferta de trabajo (Computrabajo, LinkedIn, etc.)")
@@ -402,24 +409,27 @@ if seccion == "Generador por URL":
                     st.error(f"No se pudo leer la oferta: {e}", icon=":material/error:")
                     st.stop()
 
-            with st.spinner("Detectando cargo con Gemini..."):
+            with st.spinner("Detectando cargo y empresa con Gemini..."):
                 try:
-                    prompt_detectar_cargo = (
-                        "Extrae únicamente el título exacto del puesto de trabajo de la siguiente oferta. "
-                        "No agregues explicaciones, comillas ni texto adicional. Responde solo el nombre del cargo."
-                    )
-                    st.session_state.puesto_detectado = generar_texto(
-                        prompt_detectar_cargo, st.session_state.texto_extraido
-                    )
+                    deteccion = extraer_cargo_y_empresa(st.session_state.texto_extraido)
+                    st.session_state.puesto_detectado = deteccion["cargo"]
+                    st.session_state.empresa_detectada = deteccion["empresa"]
                 except ErrorIA as e:
                     st.error(f"Error en la IA: {e}", icon=":material/error:")
                     st.stop()
 
     with st.container(border=True):
-        puesto_objetivo = st.text_input(
-            "Puesto detectado (editable)",
-            value=st.session_state.puesto_detectado,
-        )
+        col_puesto, col_empresa = st.columns(2)
+        with col_puesto:
+            puesto_objetivo = st.text_input(
+                "Puesto detectado (editable)",
+                value=st.session_state.puesto_detectado,
+            )
+        with col_empresa:
+            empresa_objetivo = st.text_input(
+                "Empresa (editable)",
+                value=st.session_state.empresa_detectada,
+            )
         col_mercado, col_estilo = st.columns(2)
         with col_mercado:
             mercado_destino = st.selectbox(
@@ -462,7 +472,7 @@ if seccion == "Generador por URL":
                     contexto_usuario["user_id"],
                     contexto_usuario["access_token"],
                     puesto=puesto_objetivo,
-                    empresa="Empresa del aviso",
+                    empresa=empresa_objetivo or "No especificada",
                     mercado=mercado_destino,
                     url_oferta=url_oferta,
                     cv_texto=documentos["cv_texto"],
@@ -473,22 +483,20 @@ if seccion == "Generador por URL":
             st.success("Documentos generados correctamente.", icon=":material/check_circle:")
 
             with st.container(horizontal=True):
-                with open(documentos["ruta_cv"], "rb") as archivo_cv:
-                    st.download_button(
-                        "Descargar CV (PDF)",
-                        data=archivo_cv.read(),
-                        file_name=os.path.basename(documentos["ruta_cv"]),
-                        mime="application/pdf",
-                        icon=":material/download:",
-                    )
-                with open(documentos["ruta_cl"], "rb") as archivo_cl:
-                    st.download_button(
-                        "Descargar Cover Letter (PDF)",
-                        data=archivo_cl.read(),
-                        file_name=os.path.basename(documentos["ruta_cl"]),
-                        mime="application/pdf",
-                        icon=":material/download:",
-                    )
+                st.download_button(
+                    "Descargar CV (PDF)",
+                    data=documentos["cv_bytes"],
+                    file_name=documentos["nombre_cv"],
+                    mime="application/pdf",
+                    icon=":material/download:",
+                )
+                st.download_button(
+                    "Descargar Cover Letter (PDF)",
+                    data=documentos["cl_bytes"],
+                    file_name=documentos["nombre_cl"],
+                    mime="application/pdf",
+                    icon=":material/download:",
+                )
                 if url_oferta:
                     st.link_button("Ir al portal a postular", url_oferta, icon=":material/open_in_new:")
 
@@ -664,24 +672,22 @@ elif seccion == "Buscador de Vacantes":
                     if resultado_1click:
                         st.success("CV y Cover Letter listos, orientados a esta oferta.", icon=":material/check_circle:")
                         with st.container(horizontal=True):
-                            with open(resultado_1click["ruta_cv"], "rb") as archivo_cv:
-                                st.download_button(
-                                    "Descargar CV",
-                                    data=archivo_cv.read(),
-                                    file_name=os.path.basename(resultado_1click["ruta_cv"]),
-                                    mime="application/pdf",
-                                    icon=":material/download:",
-                                    key=f"dl_cv_{indice}",
-                                )
-                            with open(resultado_1click["ruta_cl"], "rb") as archivo_cl:
-                                st.download_button(
-                                    "Descargar Cover Letter",
-                                    data=archivo_cl.read(),
-                                    file_name=os.path.basename(resultado_1click["ruta_cl"]),
-                                    mime="application/pdf",
-                                    icon=":material/download:",
-                                    key=f"dl_cl_{indice}",
-                                )
+                            st.download_button(
+                                "Descargar CV",
+                                data=resultado_1click["cv_bytes"],
+                                file_name=resultado_1click["nombre_cv"],
+                                mime="application/pdf",
+                                icon=":material/download:",
+                                key=f"dl_cv_{indice}",
+                            )
+                            st.download_button(
+                                "Descargar Cover Letter",
+                                data=resultado_1click["cl_bytes"],
+                                file_name=resultado_1click["nombre_cl"],
+                                mime="application/pdf",
+                                icon=":material/download:",
+                                key=f"dl_cl_{indice}",
+                            )
                             st.link_button(
                                 "Postular ahora en el portal", oferta["link"],
                                 icon=":material/open_in_new:", key=f"ir_postular_{indice}",
@@ -693,7 +699,48 @@ elif seccion == "Buscador de Vacantes":
                         )
 
 # -------------------------------------------------------------
-# SECCIÓN 3: MI PERFIL
+# SECCIÓN 3: MIS POSTULACIONES
+# -------------------------------------------------------------
+elif seccion == "Mis Postulaciones":
+    st.subheader("Mis postulaciones")
+
+    if not contexto_usuario:
+        st.info(
+            "Esto es solo para cuentas registradas — en modo invitado no se guarda historial. "
+            "Cierra sesión y entra con Google, GitHub o Facebook para empezar a llevar registro.",
+            icon=":material/info:",
+        )
+    else:
+        historial = obtener_historial_reciente(contexto_usuario["user_id"], contexto_usuario["access_token"], limite=20)
+        if not historial:
+            st.info("Todavía no generaste ninguna postulación. Empieza en \"Generador por URL\" o \"Buscador de Vacantes\".", icon=":material/info:")
+        else:
+            for item in historial:
+                with st.container(border=True):
+                    col_info, col_estado = st.columns([4, 1])
+                    with col_info:
+                        st.markdown(f"**{item['puesto']}**")
+                        st.caption(f"{item.get('empresa') or 'Empresa no especificada'} — {item.get('mercado', '')}")
+                    with col_estado:
+                        if item.get("estado") == "postulado":
+                            st.badge("Postulado", icon=":material/check_circle:", color="green")
+                        else:
+                            st.badge("Generado", icon=":material/description:", color="gray")
+                    with st.container(horizontal=True, vertical_alignment="center"):
+                        if item.get("match_score") is not None:
+                            st.caption(f"Match ATS: {item['match_score']}/100")
+                        if item.get("creado_en"):
+                            st.caption(str(item["creado_en"])[:16].replace("T", " "))
+                        if item.get("url_oferta"):
+                            st.link_button("Ver oferta", item["url_oferta"], icon=":material/open_in_new:", key=f"hist_link_{item['id']}")
+                        if item.get("estado") != "postulado" and st.button(
+                            "Marcar como postulado", icon=":material/check:", key=f"hist_marcar_{item['id']}"
+                        ):
+                            marcar_postulado(contexto_usuario["user_id"], contexto_usuario["access_token"], item["id"])
+                            st.rerun()
+
+# -------------------------------------------------------------
+# SECCIÓN 4: MI PERFIL
 # -------------------------------------------------------------
 elif seccion == "Mi Perfil":
     st.subheader("Mi perfil")
@@ -758,7 +805,7 @@ elif seccion == "Mi Perfil":
                 st.rerun()
 
 # -------------------------------------------------------------
-# SECCIÓN 4: PREGUNTAS DE POSTULACIÓN
+# SECCIÓN 5: PREGUNTAS DE POSTULACIÓN
 # -------------------------------------------------------------
 elif seccion == "Preguntas de Postulación":
     st.subheader("Asistente de respuestas para formularios de postulación")
@@ -797,7 +844,7 @@ elif seccion == "Preguntas de Postulación":
             st.caption(resultado["justificacion"])
 
 # -------------------------------------------------------------
-# SECCIÓN 5: FAQ
+# SECCIÓN 6: FAQ
 # -------------------------------------------------------------
 elif seccion == "FAQ":
     st.subheader("Preguntas frecuentes")

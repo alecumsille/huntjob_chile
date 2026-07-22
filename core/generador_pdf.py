@@ -4,6 +4,7 @@ consistentes. Sanea nombres de archivo para evitar rutas inválidas.
 """
 
 import re
+from io import BytesIO
 from xml.sax.saxutils import escape
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
@@ -50,20 +51,23 @@ def _limpiar_markdown(linea: str) -> str:
     return limpia
 
 
-def generar_pdf(ruta_salida: str, contenido_texto: str, tipo_documento: str, puesto: str, perfil: dict, estilo_nombre: str = "Pastel") -> None:
+def generar_pdf(contenido_texto: str, tipo_documento: str, puesto: str, perfil: dict, estilo_nombre: str = "Pastel") -> bytes:
     """
-    Compila un PDF con encabezado real (nombre, contacto, tipo de
-    documento + puesto) y cuerpo en párrafos separados. Diseño simple de
-    una sola columna, sin tablas ni texto en imágenes — apto para
-    parsers ATS, que solo leen texto plano en orden de lectura normal.
-    Lanza ValueError si el contenido está vacío, en vez de generar un
-    PDF en blanco silenciosamente.
+    Compila un PDF en memoria (nunca en disco — con múltiples usuarios
+    reales, un archivo compartido en salidas_pdf/ podía pisarse entre
+    postulaciones simultáneas) con encabezado real (nombre, contacto,
+    tipo de documento + puesto) y cuerpo en párrafos separados. Diseño
+    simple de una sola columna, sin tablas ni texto en imágenes — apto
+    para parsers ATS, que solo leen texto plano en orden de lectura
+    normal. Lanza ValueError si el contenido está vacío, en vez de
+    generar un PDF en blanco silenciosamente.
     """
     if not contenido_texto or not contenido_texto.strip():
-        raise ValueError(f"No se puede generar '{ruta_salida}': el contenido está vacío.")
+        raise ValueError(f"No se puede generar el {tipo_documento}: el contenido está vacío.")
 
+    buffer = BytesIO()
     documento = SimpleDocTemplate(
-        ruta_salida,
+        buffer,
         pagesize=letter,
         topMargin=0.75 * inch,
         bottomMargin=0.75 * inch,
@@ -126,3 +130,4 @@ def generar_pdf(ruta_salida: str, contenido_texto: str, tipo_documento: str, pue
             elementos.append(Paragraph(escape(linea_limpia), estilo_cuerpo))
 
     documento.build(elementos)
+    return buffer.getvalue()

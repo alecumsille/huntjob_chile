@@ -5,13 +5,9 @@ botón de 1-click desde el buscador, para no mantener el mismo texto
 duplicado en dos pantallas.
 """
 
-import os
-
 from core.motor_ia import generar_texto, ErrorIA
 from core.generador_pdf import generar_pdf, sanear_nombre_archivo
 from core.perfil import formatear_perfil
-
-CARPETA_SALIDA = "salidas_pdf"
 
 
 def generar_documentos(
@@ -23,13 +19,14 @@ def generar_documentos(
     match: dict | None = None,
 ) -> dict:
     """
-    Genera y guarda en disco el CV y la Cover Letter en PDF. Si se pasa
-    un `match` (resultado de analizar_match), el CV se redacta apuntando
-    a cerrar esas brechas específicas en vez de un texto genérico.
-    Devuelve {"ruta_cv", "ruta_cl", "cv_texto", "cover_letter_texto"}.
+    Genera el CV y la Cover Letter en PDF, en memoria (nunca en disco —
+    evita que dos postulaciones simultáneas de usuarios distintos se
+    pisen en una carpeta compartida). Si se pasa un `match` (resultado
+    de analizar_match), el CV se redacta apuntando a cerrar esas brechas
+    específicas en vez de un texto genérico.
+    Devuelve {"cv_bytes", "cl_bytes", "nombre_cv", "nombre_cl", "cv_texto", "cover_letter_texto"}.
     Lanza ErrorIA o ValueError si algo falla.
     """
-    os.makedirs(CARPETA_SALIDA, exist_ok=True)
     contexto_perfil = formatear_perfil(perfil)
 
     instruccion_brechas = ""
@@ -80,15 +77,15 @@ def generar_documentos(
 
     cargo_limpio = sanear_nombre_archivo(puesto_objetivo)
     nombre_archivo = sanear_nombre_archivo(perfil.get("nombre") or "candidato")
-    ruta_cv = os.path.join(CARPETA_SALIDA, f"CV_{nombre_archivo}_{cargo_limpio}.pdf")
-    ruta_cl = os.path.join(CARPETA_SALIDA, f"CoverLetter_{nombre_archivo}_{cargo_limpio}.pdf")
 
-    generar_pdf(ruta_cv, cv_texto, "CV Profesional", puesto_objetivo, perfil, estilo_nombre=estilo_pdf)
-    generar_pdf(ruta_cl, cover_letter_texto, "Cover Letter", puesto_objetivo, perfil, estilo_nombre=estilo_pdf)
+    cv_bytes = generar_pdf(cv_texto, "CV Profesional", puesto_objetivo, perfil, estilo_nombre=estilo_pdf)
+    cl_bytes = generar_pdf(cover_letter_texto, "Cover Letter", puesto_objetivo, perfil, estilo_nombre=estilo_pdf)
 
     return {
-        "ruta_cv": ruta_cv,
-        "ruta_cl": ruta_cl,
+        "cv_bytes": cv_bytes,
+        "cl_bytes": cl_bytes,
+        "nombre_cv": f"CV_{nombre_archivo}_{cargo_limpio}.pdf",
+        "nombre_cl": f"CoverLetter_{nombre_archivo}_{cargo_limpio}.pdf",
         "cv_texto": cv_texto,
         "cover_letter_texto": cover_letter_texto,
     }

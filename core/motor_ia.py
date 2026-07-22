@@ -135,6 +135,31 @@ def generar_texto(prompt_sistema: str, texto_base: str) -> str:
     return _ejecutar_con_fallback(prompt_completo)
 
 
+def extraer_cargo_y_empresa(texto_oferta: str) -> dict:
+    """Detecta el título del puesto y la empresa que publica la oferta en un solo llamado."""
+    prompt = (
+        "Extrae de la siguiente oferta laboral el título exacto del puesto y el nombre de la "
+        "empresa que publica el aviso. Si la empresa no está indicada explícitamente (ej. "
+        "'empresa confidencial' o portales que la ocultan), responde \"No especificada\". "
+        "Responde ÚNICAMENTE un objeto JSON con las llaves \"cargo\" y \"empresa\".\n\n"
+        f"Oferta laboral:\n{texto_oferta[:LIMITE_CARACTERES_CONTEXTO]}"
+    )
+    schema = {
+        "type": "OBJECT",
+        "properties": {"cargo": {"type": "STRING"}, "empresa": {"type": "STRING"}},
+        "required": ["cargo", "empresa"],
+    }
+    texto_res = _ejecutar_con_fallback(prompt, response_mime_type="application/json", response_schema=schema)
+    try:
+        resultado = json.loads(texto_res)
+        return {
+            "cargo": str(resultado.get("cargo", "")).strip(),
+            "empresa": str(resultado.get("empresa", "No especificada")).strip(),
+        }
+    except Exception as e:
+        raise ErrorIA(f"Error procesando detección de cargo/empresa: {e}")
+
+
 def analizar_match(texto_oferta: str, perfil: dict) -> dict:
     contexto_perfil = formatear_perfil(perfil)
     prompt = (
