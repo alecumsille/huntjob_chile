@@ -144,6 +144,8 @@ def analizar_match(texto_oferta: str, perfil: dict) -> dict:
         "- \"score\": (entero de 0 a 100 indicando la compatibilidad ATS)\n"
         "- \"explicacion\": (string de 2 a 3 líneas con el diagnóstico general)\n"
         "- \"fortalezas\": (lista de 2 a 4 ítems con los puntos fuertes coincidentes)\n"
+        "- \"debilidades\": (lista de 2 a 4 brechas reales del candidato frente a la oferta: seniority, "
+        "años de experiencia, dominio de un área, etc. — no repitas aquí lo que ya va en palabras_faltantes)\n"
         "- \"palabras_faltantes\": (lista de 2 a 4 términos o herramientas clave que exige la oferta pero no destacan en el perfil)\n"
         "- \"recomendaciones\": (lista de 2 a 3 acciones concretas para subir el puntaje de postulación)\n\n"
         f"Perfil del candidato:\n{contexto_perfil}\n\n"
@@ -155,12 +157,13 @@ def analizar_match(texto_oferta: str, perfil: dict) -> dict:
             "score": {"type": "INTEGER"},
             "explicacion": {"type": "STRING"},
             "fortalezas": {"type": "ARRAY", "items": {"type": "STRING"}},
+            "debilidades": {"type": "ARRAY", "items": {"type": "STRING"}},
             "palabras_faltantes": {"type": "ARRAY", "items": {"type": "STRING"}},
             "recomendaciones": {"type": "ARRAY", "items": {"type": "STRING"}},
         },
-        "required": ["score", "explicacion", "fortalezas", "palabras_faltantes", "recomendaciones"],
+        "required": ["score", "explicacion", "fortalezas", "debilidades", "palabras_faltantes", "recomendaciones"],
     }
-    
+
     texto_res = _ejecutar_con_fallback(prompt, response_mime_type="application/json", response_schema=schema)
     try:
         resultado = json.loads(texto_res)
@@ -168,6 +171,7 @@ def analizar_match(texto_oferta: str, perfil: dict) -> dict:
             "score": int(resultado.get("score", 50)),
             "explicacion": str(resultado.get("explicacion", "")),
             "fortalezas": list(resultado.get("fortalezas", [])),
+            "debilidades": list(resultado.get("debilidades", [])),
             "palabras_faltantes": list(resultado.get("palabras_faltantes", [])),
             "recomendaciones": list(resultado.get("recomendaciones", [])),
         }

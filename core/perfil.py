@@ -1,15 +1,13 @@
 """
-Módulo de almacenamiento del perfil de usuario. Persiste en un YAML local
-que nunca se commitea (ver .gitignore) — son datos personales. "Sin
-perfil guardado" es un estado válido: cargar_perfil() nunca lanza
-excepción por archivo faltante, solo devuelve valores por defecto.
+Gestión del perfil de usuario. Con cuenta real (Supabase), el perfil
+vive en Postgres por user_id (ver core/db.py) — nunca en disco. En
+modo invitado (sin cuenta) vive solo en st.session_state, que es
+privado por navegador/pestaña y se pierde al cerrar sesión: nunca se
+escribe a un archivo compartido en el servidor, que era la fuga de
+datos entre visitantes que tenía la versión anterior.
 """
 
-import os
-import yaml
-
-CARPETA_PERFIL = "perfil"
-RUTA_PERFIL = os.path.join(CARPETA_PERFIL, "mi_perfil.yaml")
+import streamlit as st
 
 VALORES_POR_DEFECTO = {
     "nombre": "",
@@ -25,53 +23,27 @@ VALORES_POR_DEFECTO = {
 NIVELES_SENIORITY = ["Junior", "Semi Senior", "Senior", "Lead"]
 
 
-def cargar_perfil() -> dict:
+def cargar_perfil(contexto_usuario: dict | None) -> dict:
     """
-    En entorno web (Streamlit Cloud), usa st.session_state para aislar los datos
-    de cada visitante. En escritorio/local, usa el archivo YAML local.
+    contexto_usuario = {"user_id": ..., "access_token": ...} para una
+    cuenta real, o None en modo invitado.
     """
-    try:
-        import streamlit as st
-        if "perfil_usuario" in st.session_state:
-            perfil = dict(VALORES_POR_DEFECTO)
-            perfil.update(st.session_state.perfil_usuario)
-            return perfil
-    except Exception:
-        pass
-
-    if not os.path.exists(RUTA_PERFIL):
-        return dict(VALORES_POR_DEFECTO)
-
-    try:
-        with open(RUTA_PERFIL, "r", encoding="utf-8") as archivo:
-            datos_guardados = yaml.safe_load(archivo) or {}
-    except yaml.YAMLError:
-        return dict(VALORES_POR_DEFECTO)
-
-    if not isinstance(datos_guardados, dict):
-        return dict(VALORES_POR_DEFECTO)
+    if contexto_usuario and contexto_usuario.get("user_id"):
+        from core.db import obtener_perfil
+        return obtener_perfil(contexto_usuario["user_id"], contexto_usuario["access_token"])
 
     perfil = dict(VALORES_POR_DEFECTO)
-    perfil.update(datos_guardados)
+    perfil.update(st.session_state.get("perfil_invitado", {}))
     return perfil
 
 
-def guardar_perfil(datos: dict) -> None:
-    """
-    Guarda el perfil en la sesión actual de Streamlit y en el archivo local.
-    """
-    try:
-        import streamlit as st
-        st.session_state.perfil_usuario = datos
-    except Exception:
-        pass
+def guardar_perfil(contexto_usuario: dict | None, datos: dict) -> None:
+    if contexto_usuario and contexto_usuario.get("user_id"):
+        from core.db import guardar_perfil_db
+        guardar_perfil_db(contexto_usuario["user_id"], contexto_usuario["access_token"], datos)
+        return
 
-    try:
-        os.makedirs(CARPETA_PERFIL, exist_ok=True)
-        with open(RUTA_PERFIL, "w", encoding="utf-8") as archivo:
-            yaml.safe_dump(datos, archivo, allow_unicode=True, sort_keys=False)
-    except Exception:
-        pass
+    st.session_state["perfil_invitado"] = datos
 
 
 def formatear_perfil(perfil: dict) -> str:

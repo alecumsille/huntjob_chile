@@ -7,10 +7,11 @@ import streamlit.components.v1 as components
 
 from core.scraper_web import extraer_texto_url, ErrorScraping
 from core.motor_ia import generar_texto, analizar_match, sugerir_respuesta, ErrorIA
-from core.generador_pdf import generar_pdf, sanear_nombre_archivo
 from core.portales import PORTALES, buscar_en_todos
-from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY, formatear_perfil
-from core.db import guardar_historial, obtener_historial_reciente
+from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY
+from core.postulacion import generar_documentos
+from core.auth_supabase import obtener_usuario_desde_token, cerrar_sesion, SUPABASE_URL
+from core.db import guardar_historial, marcar_postulado, verificar_y_consumir_uso, obtener_plan
 
 st.set_page_config(page_title="HuntJob Chile", page_icon="assets/icon.png", layout="wide")
 
@@ -85,26 +86,40 @@ def _social_icon_b64(nombre: str) -> str:
     return ""
 
 
-def _clave_configurada() -> str:
+# Supabase entrega el token en el fragmento de la URL (#access_token=...),
+# que el servidor de Streamlit nunca puede leer — solo el navegador. Este
+# puente en JS lo copia a un query param (?access_token=...) para que el
+# próximo rerun de Python sí lo reciba en st.query_params.
+components.html(
     """
-    Devuelve la clave de acceso configurada vía st.secrets (solo aplica en
-    un despliegue público, ej. Streamlit Community Cloud). En uso local o
-    en la app de escritorio no hay secrets.toml, así que esto devuelve ""
-    y la app no pide clave — el gate solo existe para el despliegue web.
-    """
-    try:
-        return st.secrets.get("APP_PASSWORD", "")
-    except Exception:
-        return ""
+    <script>
+    const hash = window.parent.location.hash;
+    if (hash && hash.includes('access_token')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const url = new URL(window.parent.location.href);
+        url.hash = '';
+        url.searchParams.set('access_token', params.get('access_token') || '');
+        window.parent.location.replace(url.toString());
+    }
+    </script>
+    """,
+    height=0,
+)
 
-
-clave_requerida = _clave_configurada()
-
-# Si el usuario vuelve desde el flujo OAuth de Supabase (URL contiene access_token o code)
-params = st.query_params
-if "code" in params or "access_token" in params or "provider" in params:
-    st.session_state["autenticado"] = True
-    st.session_state["proveedor_auth"] = params.get("provider", "OAuth Social")
+if not st.session_state.get("autenticado", False):
+    token_url = st.query_params.get("access_token")
+    if token_url:
+        usuario = obtener_usuario_desde_token(token_url)
+        if usuario:
+            st.session_state["autenticado"] = True
+            st.session_state["user_id"] = usuario["id"]
+            st.session_state["user_email"] = usuario["email"]
+            st.session_state["access_token"] = token_url
+            st.session_state["proveedor_auth"] = usuario["proveedor"]
+            st.query_params.clear()
+            st.rerun()
+        else:
+            st.query_params.clear()
 
 if not st.session_state.get("autenticado", False):
     col_a, col_b, col_c = st.columns([1, 2, 1])
@@ -123,7 +138,7 @@ if not st.session_state.get("autenticado", False):
         g_b64 = _social_icon_b64("google")
         gh_b64 = _social_icon_b64("github")
         fb_b64 = _social_icon_b64("facebook")
-        supabase_url = st.secrets.get("SUPABASE_URL", "https://oonkwgfawfyqtrndshhu.supabase.co")
+        supabase_url = SUPABASE_URL
         redirect_target = "https://huntjob.cumsille.me"
         url_google = f"{supabase_url}/auth/v1/authorize?provider=google&redirect_to={redirect_target}"
         url_github = f"{supabase_url}/auth/v1/authorize?provider=github&redirect_to={redirect_target}"
@@ -161,10 +176,13 @@ if not st.session_state.get("autenticado", False):
             unsafe_allow_html=True
         )
 
-        if st.button("Ingreso Rápido Directo", use_container_width=True, type="secondary"):
+        if st.button("Probar sin cuenta (modo invitado)", use_container_width=True, type="secondary"):
             st.session_state["autenticado"] = True
-            st.session_state["proveedor_auth"] = "Usuario Invitado"
+            st.session_state["user_id"] = None
+            st.session_state["access_token"] = None
+            st.session_state["proveedor_auth"] = "Invitado"
             st.rerun()
+        st.caption("En modo invitado tu perfil e historial no se guardan — se pierden al cerrar la pestaña.")
 
     st.stop()
 
@@ -315,16 +333,37 @@ components.html(
     scrolling=False,
 )
 
-CARPETA_SALIDA = "salidas_pdf"
-os.makedirs(CARPETA_SALIDA, exist_ok=True)
+# Contexto de usuario: None en modo invitado, o {"user_id","access_token"}
+# con cuenta real — todas las lecturas/escrituras de datos lo reciben para
+# saber si van a Postgres (por usuario) o solo a la sesión (invitado).
+contexto_usuario = None
+if st.session_state.get("user_id"):
+    contexto_usuario = {
+        "user_id": st.session_state["user_id"],
+        "access_token": st.session_state["access_token"],
+    }
 
 with st.sidebar:
-    proveedor = st.session_state.get("proveedor_auth", "Usuario Registrado")
-    st.markdown(f"**Cuenta:** {proveedor}")
+    proveedor = st.session_state.get("proveedor_auth", "Usuario")
+    correo = st.session_state.get("user_email", "")
+    st.markdown(f"**Cuenta:** {proveedor}" + (f"  \n{correo}" if correo else ""))
+
+    if contexto_usuario:
+        try:
+            plan = obtener_plan(contexto_usuario["user_id"], contexto_usuario["access_token"])
+            if plan["plan"] == "premium":
+                st.caption("Plan Premium — generaciones sin límite ✨")
+            else:
+                st.caption(f"Plan gratuito — {plan['generaciones_este_mes']}/{plan['limite_mensual']} generaciones usadas este mes")
+        except Exception:
+            pass
+    else:
+        st.caption("Modo invitado — datos no guardados")
+
     if st.button("Cerrar Sesión", icon=":material/logout:", use_container_width=True):
-        st.session_state["autenticado"] = False
-        st.session_state["perfil_usuario"] = {}
-        st.session_state["proveedor_auth"] = None
+        if contexto_usuario:
+            cerrar_sesion(contexto_usuario["access_token"])
+        st.session_state.clear()
         st.rerun()
     st.divider()
     seccion = st.radio(
@@ -339,7 +378,7 @@ with st.sidebar:
 if seccion == "Generador por URL":
     st.subheader("Generación de CV y Cover Letter desde una oferta puntual")
 
-    perfil = cargar_perfil()
+    perfil = cargar_perfil(contexto_usuario)
     if not perfil["nombre"]:
         st.warning(
             "Tu perfil aún no está completo — los documentos se firmarán como \"Candidato/a\". "
@@ -399,84 +438,59 @@ if seccion == "Generador por URL":
                 st.error("El campo de puesto objetivo no puede estar vacío.", icon=":material/error:")
                 st.stop()
 
+            if contexto_usuario:
+                permitido, aviso_uso = verificar_y_consumir_uso(
+                    contexto_usuario["user_id"], contexto_usuario["access_token"]
+                )
+                if not permitido:
+                    st.error(aviso_uso, icon=":material/lock:")
+                    st.stop()
+                if aviso_uso:
+                    st.info(aviso_uso, icon=":material/info:")
+
             with st.spinner("Redactando documentos con Gemini..."):
                 try:
-                    contexto_perfil = formatear_perfil(perfil)
-                    prompt_cv = (
-                        f"Redacta un Curriculum Vitae Completo y Profesional en español, optimizado para pasar filtros ATS, "
-                        f"diseñado para el puesto de {puesto_objetivo} en {mercado_destino}.\n"
-                        f"Usa exclusivamente el stack, experiencia y logros reales del candidato descritos en su perfil.\n"
-                        f"Estructura el CV estrictamente con las siguientes secciones limpias:\n\n"
-                        f"PERFIL PROFESIONAL\n"
-                        f"(Un extracto potente de 4 a 5 líneas enfocado en {puesto_objetivo} con palabras clave del aviso)\n\n"
-                        f"EXPERIENCIA Y LOGROS DESTACADOS\n"
-                        f"(Puntos concretos con métricas o resultados basados en la experiencia real del candidato)\n\n"
-                        f"COMPETENCIAS TÉCNICAS Y HERRAMIENTAS\n"
-                        f"(Listado estructurado del stack tecnológico que calza con el aviso)\n\n"
-                        f"NUNCA inventes tecnologías o empresas que no estén en el perfil del candidato.\n\n"
-                        f"Perfil del candidato:\n{contexto_perfil}"
+                    documentos = generar_documentos(
+                        st.session_state.texto_extraido, puesto_objetivo, mercado_destino, estilo_pdf, perfil
                     )
-                    nombre_firma = perfil["nombre"] or "Candidato/a"
-                    prompt_cover = (
-                        f"Escribe ÚNICAMENTE el cuerpo de una Cover Letter en español, directa y sin rodeos, "
-                        f"para el puesto de {puesto_objetivo} en {mercado_destino}. Si el perfil tiene "
-                        f"logros o experiencia, menciona como máximo uno concreto que calce con esta oferta "
-                        f"— si no hay logros cargados, escribe sin inventar ninguno. NUNCA indiques que el "
-                        f"candidato domina o usa una tecnología que no esté textualmente en su 'Stack "
-                        f"principal', aunque la oferta la pida — en ese caso, puedes mencionar disposición "
-                        f"a aprenderla, nunca dominio que no tiene. Firma con el nombre {nombre_firma}. "
-                        f"No agregues explicaciones ni ningún texto que no sea la carta en sí.\n\n"
-                        f"Perfil del candidato:\n{contexto_perfil}"
-                    )
-
-                    cv_adaptado = generar_texto(prompt_cv, st.session_state.texto_extraido)
-                    cover_letter_adaptada = generar_texto(prompt_cover, st.session_state.texto_extraido)
-                except ErrorIA as e:
+                except (ErrorIA, ValueError) as e:
                     st.error(f"Error al generar el contenido: {e}", icon=":material/error:")
                     st.stop()
 
-            cargo_limpio = sanear_nombre_archivo(puesto_objetivo)
-            nombre_archivo = sanear_nombre_archivo(perfil["nombre"] or "candidato")
-            ruta_cv = os.path.join(CARPETA_SALIDA, f"CV_{nombre_archivo}_{cargo_limpio}.pdf")
-            ruta_cl = os.path.join(CARPETA_SALIDA, f"CoverLetter_{nombre_archivo}_{cargo_limpio}.pdf")
-
-            try:
-                generar_pdf(ruta_cv, cv_adaptado, "CV Profesional", puesto_objetivo, perfil, estilo_nombre=estilo_pdf)
-                generar_pdf(ruta_cl, cover_letter_adaptada, "Cover Letter", puesto_objetivo, perfil, estilo_nombre=estilo_pdf)
-                
-                # Guardar en memoria de base de datos SQLite
+            if contexto_usuario:
                 guardar_historial(
+                    contexto_usuario["user_id"],
+                    contexto_usuario["access_token"],
                     puesto=puesto_objetivo,
                     empresa="Empresa del aviso",
                     mercado=mercado_destino,
                     url_oferta=url_oferta,
-                    cv_texto=cv_adaptado,
-                    cover_letter_texto=cover_letter_adaptada,
-                    estilo_pdf=estilo_pdf
+                    cv_texto=documentos["cv_texto"],
+                    cover_letter_texto=documentos["cover_letter_texto"],
+                    estilo_pdf=estilo_pdf,
                 )
-            except ValueError as e:
-                st.error(f"Error al generar el PDF: {e}", icon=":material/error:")
-                st.stop()
 
             st.success("Documentos generados correctamente.", icon=":material/check_circle:")
 
             with st.container(horizontal=True):
-                with open(ruta_cv, "rb") as archivo_cv:
+                with open(documentos["ruta_cv"], "rb") as archivo_cv:
                     st.download_button(
                         "Descargar CV (PDF)",
                         data=archivo_cv.read(),
-                        file_name=os.path.basename(ruta_cv),
+                        file_name=os.path.basename(documentos["ruta_cv"]),
                         mime="application/pdf",
                         icon=":material/download:",
                     )
-                with open(ruta_cl, "rb") as archivo_cl:
+                with open(documentos["ruta_cl"], "rb") as archivo_cl:
                     st.download_button(
                         "Descargar Cover Letter (PDF)",
                         data=archivo_cl.read(),
-                        file_name=os.path.basename(ruta_cl),
+                        file_name=os.path.basename(documentos["ruta_cl"]),
                         mime="application/pdf",
                         icon=":material/download:",
                     )
+                if url_oferta:
+                    st.link_button("Ir al portal a postular", url_oferta, icon=":material/open_in_new:")
 
 # -------------------------------------------------------------
 # SECCIÓN 2: BUSCADOR MULTI-PORTAL DE VACANTES REALES
@@ -530,7 +544,9 @@ elif seccion == "Buscador de Vacantes":
                 st.info("No se encontraron ofertas para esa palabra clave en los portales seleccionados.")
         else:
             st.success(f"Se encontraron {len(st.session_state.resultados_busqueda)} vacantes.", icon=":material/check_circle:")
-            perfil_para_match = cargar_perfil()
+            perfil_para_match = cargar_perfil(contexto_usuario)
+            if "postulaciones_1click" not in st.session_state:
+                st.session_state.postulaciones_1click = {}
 
             for indice, oferta in enumerate(st.session_state.resultados_busqueda):
                 with st.container(border=True):
@@ -542,51 +558,139 @@ elif seccion == "Buscador de Vacantes":
                             st.badge(oferta["modalidad"], icon=":material/home_work:", color="blue")
                         if oferta.get("publicado"):
                             st.caption(oferta["publicado"])
-                    if oferta["link"]:
-                        st.link_button(
-                            "Ver oferta", oferta["link"], icon=":material/open_in_new:", key=f"ver_oferta_{indice}"
-                        )
 
                     match = st.session_state.matches.get(oferta["link"])
                     if match:
                         color_score = "green" if match["score"] >= 70 else "yellow" if match["score"] >= 40 else "red"
                         st.badge(f"Match ATS: {match['score']}/100", icon=":material/insights:", color=color_score)
                         st.caption(match["explicacion"])
-                        
+
                         with st.expander("Ver Auditoría de Compatibilidad ATS Detallada"):
                             st.progress(match["score"] / 100, text=f"Puntaje de Coincidencia: {match['score']}%")
-                            
+
                             col1, col2 = st.columns(2)
                             with col1:
                                 if match.get("fortalezas"):
                                     st.markdown("**Fortalezas detectadas:**")
                                     for f in match["fortalezas"]:
                                         st.markdown(f"- {f}")
-                            with col2:
                                 if match.get("palabras_faltantes"):
                                     st.markdown("**Palabras clave faltantes en tu CV:**")
                                     for p in match["palabras_faltantes"]:
                                         st.markdown(f"- `{p}`")
-                            
+                            with col2:
+                                if match.get("debilidades"):
+                                    st.markdown("**Debilidades frente a esta oferta:**")
+                                    for d in match["debilidades"]:
+                                        st.markdown(f"- {d}")
+
                             if match.get("recomendaciones"):
                                 st.markdown("**Acciones sugeridas para mejorar la postulación:**")
                                 for r in match["recomendaciones"]:
                                     st.markdown(f"- {r}")
 
-                    elif oferta["link"] and st.button(
-                        "Analizar match ATS", icon=":material/insights:", key=f"match_{indice}"
-                    ):
-                        with st.spinner("Realizando auditoría ATS con tu perfil..."):
-                            try:
-                                texto_oferta = extraer_texto_url(oferta["link"])
-                                st.session_state.matches[oferta["link"]] = analizar_match(
-                                    texto_oferta, perfil_para_match
+                    resultado_1click = st.session_state.postulaciones_1click.get(oferta["link"])
+
+                    with st.container(horizontal=True, vertical_alignment="center"):
+                        if oferta["link"]:
+                            st.link_button(
+                                "Ver oferta", oferta["link"], icon=":material/open_in_new:", key=f"ver_oferta_{indice}"
+                            )
+                        if oferta["link"] and not match and st.button(
+                            "Analizar match ATS", icon=":material/insights:", key=f"match_{indice}"
+                        ):
+                            with st.spinner("Realizando auditoría ATS con tu perfil..."):
+                                try:
+                                    texto_oferta = extraer_texto_url(oferta["link"])
+                                    st.session_state.matches[oferta["link"]] = analizar_match(
+                                        texto_oferta, perfil_para_match
+                                    )
+                                    st.rerun()
+                                except ErrorScraping as e:
+                                    st.error(f"No se pudo leer la oferta: {e}", icon=":material/error:")
+                                except ErrorIA as e:
+                                    st.error(f"Error en la IA: {e}", icon=":material/error:")
+
+                        if oferta["link"] and not resultado_1click and st.button(
+                            "Postular en 1 click", icon=":material/bolt:", type="primary", key=f"postular_{indice}"
+                        ):
+                            if contexto_usuario:
+                                permitido, aviso_uso = verificar_y_consumir_uso(
+                                    contexto_usuario["user_id"], contexto_usuario["access_token"]
                                 )
-                                st.rerun()
-                            except ErrorScraping as e:
-                                st.error(f"No se pudo leer la oferta: {e}", icon=":material/error:")
-                            except ErrorIA as e:
-                                st.error(f"Error en la IA: {e}", icon=":material/error:")
+                                if not permitido:
+                                    st.error(aviso_uso, icon=":material/lock:")
+                                    st.stop()
+                            with st.spinner("Analizando match, redactando CV y Cover Letter a la medida..."):
+                                try:
+                                    texto_oferta = extraer_texto_url(oferta["link"])
+                                    match_1click = st.session_state.matches.get(oferta["link"]) or analizar_match(
+                                        texto_oferta, perfil_para_match
+                                    )
+                                    st.session_state.matches[oferta["link"]] = match_1click
+                                    documentos = generar_documentos(
+                                        texto_oferta,
+                                        oferta["titulo"],
+                                        "Chile",
+                                        "Pastel",
+                                        perfil_para_match,
+                                        match=match_1click,
+                                    )
+                                    historial_id = None
+                                    if contexto_usuario:
+                                        historial_id = guardar_historial(
+                                            contexto_usuario["user_id"],
+                                            contexto_usuario["access_token"],
+                                            puesto=oferta["titulo"],
+                                            empresa=oferta.get("empresa", ""),
+                                            mercado="Chile",
+                                            url_oferta=oferta["link"],
+                                            cv_texto=documentos["cv_texto"],
+                                            cover_letter_texto=documentos["cover_letter_texto"],
+                                            estilo_pdf="Pastel",
+                                            match_score=match_1click["score"],
+                                            estado="postulado",
+                                        )
+                                    st.session_state.postulaciones_1click[oferta["link"]] = {
+                                        **documentos,
+                                        "historial_id": historial_id,
+                                    }
+                                    st.rerun()
+                                except ErrorScraping as e:
+                                    st.error(f"No se pudo leer la oferta: {e}", icon=":material/error:")
+                                except (ErrorIA, ValueError) as e:
+                                    st.error(f"Error al generar tu postulación: {e}", icon=":material/error:")
+
+                    if resultado_1click:
+                        st.success("CV y Cover Letter listos, orientados a esta oferta.", icon=":material/check_circle:")
+                        with st.container(horizontal=True):
+                            with open(resultado_1click["ruta_cv"], "rb") as archivo_cv:
+                                st.download_button(
+                                    "Descargar CV",
+                                    data=archivo_cv.read(),
+                                    file_name=os.path.basename(resultado_1click["ruta_cv"]),
+                                    mime="application/pdf",
+                                    icon=":material/download:",
+                                    key=f"dl_cv_{indice}",
+                                )
+                            with open(resultado_1click["ruta_cl"], "rb") as archivo_cl:
+                                st.download_button(
+                                    "Descargar Cover Letter",
+                                    data=archivo_cl.read(),
+                                    file_name=os.path.basename(resultado_1click["ruta_cl"]),
+                                    mime="application/pdf",
+                                    icon=":material/download:",
+                                    key=f"dl_cl_{indice}",
+                                )
+                            st.link_button(
+                                "Postular ahora en el portal", oferta["link"],
+                                icon=":material/open_in_new:", key=f"ir_postular_{indice}",
+                            )
+                        st.caption(
+                            "Descarga los documentos y termina la postulación en el portal — no enviamos "
+                            "formularios automáticamente por ti, ya que eso requeriría tu sesión logueada "
+                            "en cada sitio y podría infringir sus términos de uso."
+                        )
 
 # -------------------------------------------------------------
 # SECCIÓN 3: MI PERFIL
@@ -598,7 +702,7 @@ elif seccion == "Mi Perfil":
         "Tu nombre ya aparece en la firma de la carta."
     )
 
-    perfil_actual = cargar_perfil()
+    perfil_actual = cargar_perfil(contexto_usuario)
 
     with st.form("form_perfil"):
         nombre = st.text_input("Nombre completo", value=perfil_actual["nombre"])
@@ -627,7 +731,7 @@ elif seccion == "Mi Perfil":
         col_sub1, col_sub2 = st.columns(2)
         with col_sub1:
             if st.form_submit_button("Guardar perfil", icon=":material/save:", type="primary", use_container_width=True):
-                guardar_perfil({
+                guardar_perfil(contexto_usuario, {
                     "nombre": nombre,
                     "email": email,
                     "telefono": telefono,
@@ -640,7 +744,7 @@ elif seccion == "Mi Perfil":
                 st.success("Perfil guardado.", icon=":material/check_circle:")
         with col_sub2:
             if st.form_submit_button("Limpiar campos del perfil", icon=":material/delete:", use_container_width=True):
-                guardar_perfil({
+                guardar_perfil(contexto_usuario, {
                     "nombre": "",
                     "email": "",
                     "telefono": "",
@@ -650,7 +754,6 @@ elif seccion == "Mi Perfil":
                     "stack_principal": "",
                     "logros_y_experiencia": "",
                 })
-                st.session_state["perfil_usuario"] = {}
                 st.success("Perfil limpiado correctamente.", icon=":material/check_circle:")
                 st.rerun()
 
@@ -683,7 +786,7 @@ elif seccion == "Preguntas de Postulación":
 
             with st.spinner("Pensando la mejor respuesta..."):
                 try:
-                    perfil_para_pregunta = cargar_perfil()
+                    perfil_para_pregunta = cargar_perfil(contexto_usuario)
                     resultado = sugerir_respuesta(pregunta, perfil_para_pregunta, opciones=opciones)
                 except ErrorIA as e:
                     st.error(f"Error en la IA: {e}", icon=":material/error:")
