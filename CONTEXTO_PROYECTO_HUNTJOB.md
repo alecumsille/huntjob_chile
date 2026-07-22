@@ -18,12 +18,11 @@ Este documento contiene toda la arquitectura, credenciales, decisiones técnicas
 
 ### **Supabase (Backend de Autenticación & OAuth)**
 - **Supabase URL:** `https://oonkwgfawfyqtrndshhu.supabase.co`
-- **Supabase Anon Key:** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vbmt3Z2Zhd2Z5cXRybmRzaGh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2NTkwMDEsImV4cCI6MjEwMDIzNTAwMX0.dRpV8vHk5Dg5oXaoJLeiToazkTv1uh8Cbb7ZFI_tudc`
-- **Supabase Admin Service Token:** `sbp_************************************` (Configurado en variables de entorno)
+- **Supabase Anon Key:** *(Configurado en variables de entorno / st.secrets)*
 - **OAuth Providers Configurados:**
-  - **Google OAuth:** Client ID `119749436163-70aaoeqjgu5109jpev227pgm14lruu9o.apps.googleusercontent.com`
-  - **GitHub OAuth:** Client ID `Ov23lifDvVuXMPktsmU0`
-  - **Facebook OAuth:** App ID `1062967339642692`
+  - **Google OAuth:** *(Client ID configurado en Supabase Console)*
+  - **GitHub OAuth:** *(Client ID configurado en Supabase Console)*
+  - **Facebook OAuth:** *(App ID configurado en Supabase Console)*
   - **Callback Redirect URI autorizada:** `https://oonkwgfawfyqtrndshhu.supabase.co/auth/v1/callback`
   - **Redirect Target:** `https://huntjob.cumsille.me`
 
