@@ -227,8 +227,8 @@ if not st.session_state.get("autenticado", False):
             st.rerun()
         st.caption("En modo invitado tu perfil e historial no se guardan — se pierden al cerrar la pestaña.")
 
-    with st.expander("¿Qué es HuntJob Chile? Ver preguntas frecuentes (FAQ)"):
-        mostrar_faq()
+        with st.expander("¿Qué es HuntJob Chile? Ver preguntas frecuentes (FAQ)"):
+            mostrar_faq()
 
     st.stop()
 
