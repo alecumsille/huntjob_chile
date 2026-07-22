@@ -137,16 +137,43 @@ def mostrar_faq() -> None:
 # que el servidor de Streamlit nunca puede leer — solo el navegador. Este
 # puente en JS lo copia a un query param (?access_token=...) para que el
 # próximo rerun de Python sí lo reciba en st.query_params.
+#
+# El redirect NO puede ser automático: los navegadores modernos bloquean
+# que un iframe sandboxed (asi renderiza Streamlit todo components.html)
+# navegue la ventana principal sin un click real de por medio ("user
+# activation"). Sin esto, el login quedaba pegado para siempre con el
+# token en el fragmento — el login "no hacía nada" para cualquier usuario.
 components.html(
     """
+    <style>
+    #hj-continuar-btn {
+        display: none;
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 10px;
+        background: #C87FA0;
+        color: white;
+        font-family: 'Nunito', sans-serif;
+        font-weight: 700;
+        font-size: 0.95rem;
+        cursor: pointer;
+    }
+    </style>
+    <button id="hj-continuar-btn">Continuar →</button>
     <script>
     const hash = window.parent.location.hash;
     if (hash && hash.includes('access_token')) {
-        const params = new URLSearchParams(hash.substring(1));
-        const url = new URL(window.parent.location.href);
-        url.hash = '';
-        url.searchParams.set('access_token', params.get('access_token') || '');
-        window.parent.location.replace(url.toString());
+        const boton = document.getElementById('hj-continuar-btn');
+        boton.style.display = 'block';
+        window.frameElement.style.height = '54px';
+        boton.addEventListener('click', function() {
+            const params = new URLSearchParams(hash.substring(1));
+            const url = new URL(window.parent.location.href);
+            url.hash = '';
+            url.searchParams.set('access_token', params.get('access_token') || '');
+            window.parent.location.replace(url.toString());
+        });
     }
     </script>
     """,
