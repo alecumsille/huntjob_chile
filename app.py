@@ -423,12 +423,20 @@ with st.sidebar:
                 if st.button("Actualizar a Premium ($4.990/mes)", type="primary", use_container_width=True):
                     from core.flow_checkout import iniciar_registro_tarjeta
 
-                    url_pago = iniciar_registro_tarjeta(
-                        user_id=contexto_usuario["user_id"],
-                        nombre=st.session_state.get("user_email", "Usuario"),
-                        email=st.session_state.get("user_email", ""),
-                    )
-                    st.link_button("Ir a pagar con Flow", url_pago, use_container_width=True)
+                    try:
+                        url_pago = iniciar_registro_tarjeta(
+                            user_id=contexto_usuario["user_id"],
+                            nombre=st.session_state.get("user_email", "Usuario"),
+                            email=st.session_state.get("user_email", ""),
+                        )
+                        st.link_button("Ir a pagar con Flow", url_pago, use_container_width=True)
+                    except Exception as e:
+                        # El error técnico se registra acá y no se le muestra
+                        # crudo al usuario, pero nunca queda en silencio.
+                        st.error(
+                            f"No se pudo iniciar el pago con Flow: {e}",
+                            icon=":material/error:",
+                        )
         except Exception:
             pass
     else:
