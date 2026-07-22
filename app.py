@@ -456,7 +456,7 @@ with st.sidebar:
                         # solo un mensaje claro para el usuario.
                         logger.exception("iniciar_registro_tarjeta: cliente Flow ya registrado")
                         st.error(
-                            "Ya tenés una cuenta de pago registrada con nosotros — "
+                            "Ya tienes una cuenta de pago registrada con nosotros — "
                             "contáctanos para activar Premium.",
                             icon=":material/error:",
                         )
