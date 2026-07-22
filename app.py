@@ -134,61 +134,15 @@ def mostrar_faq() -> None:
 
 
 # Supabase entrega el token en el fragmento de la URL (#access_token=...),
-# que el servidor de Streamlit nunca puede leer — solo el navegador. Este
-# puente en JS lo copia a un query param (?access_token=...) para que el
-# próximo rerun de Python sí lo reciba en st.query_params.
-#
-# El redirect NO puede ser automático: los navegadores modernos bloquean
-# que un iframe sandboxed (asi renderiza Streamlit todo components.html)
-# navegue la ventana principal sin un click real de por medio ("user
-# activation"). Sin esto, el login quedaba pegado para siempre con el
-# token en el fragmento — el login "no hacía nada" para cualquier usuario.
-#
-# El alto del iframe queda FIJO en 54px siempre (no se resize dinámico
-# con JS): Streamlit reserva el espacio en su propio layout según el
-# height que se le pasa acá en Python, y cambiarlo desde adentro con
-# window.frameElement.style.height no se lo comunica al layout — el
-# botón quedaba pintado encima, pero otro elemento de Streamlit (que sí
-# vive en el flujo normal del documento) quedaba superpuesto arriba y
-# se comía el click. Con el espacio siempre reservado, no hay overlap.
-components.html(
-    """
-    <style>
-    body { margin: 0; }
-    #hj-continuar-btn {
-        display: none;
-        width: 100%;
-        height: 54px;
-        padding: 0;
-        border: none;
-        border-radius: 10px;
-        background: #C87FA0;
-        color: white;
-        font-family: 'Nunito', sans-serif;
-        font-weight: 700;
-        font-size: 0.95rem;
-        cursor: pointer;
-    }
-    </style>
-    <button id="hj-continuar-btn">Continuar →</button>
-    <script>
-    const hash = window.parent.location.hash;
-    if (hash && hash.includes('access_token')) {
-        const boton = document.getElementById('hj-continuar-btn');
-        boton.style.display = 'block';
-        boton.addEventListener('click', function() {
-            const params = new URLSearchParams(hash.substring(1));
-            const url = new URL(window.parent.location.href);
-            url.hash = '';
-            url.searchParams.set('access_token', params.get('access_token') || '');
-            window.parent.location.replace(url.toString());
-        });
-    }
-    </script>
-    """,
-    height=54,
-)
-
+# que ningun servidor puede leer — solo el navegador. Streamlit no puede
+# moverlo a un query param por su cuenta: components.html renderiza todo
+# en un iframe sandboxed sin permiso de top-navigation, ni siquiera con
+# un click real de por medio — el sandbox de Streamlit no otorga ese
+# permiso, es incondicional, no depende de "user activation". Por eso el
+# redirect_to (mas abajo, en la seccion de login) apunta al puente
+# `/auth/bridge` de huntjob_payments — una pagina sin sandbox que hace
+# ese mismo movimiento sin ninguna restriccion — y este bloque solo
+# recibe el resultado ya limpio como query param.
 if not st.session_state.get("autenticado", False):
     token_url = st.query_params.get("access_token")
     if token_url:
@@ -222,7 +176,9 @@ if not st.session_state.get("autenticado", False):
         gh_b64 = _social_icon_b64("github")
         fb_b64 = _social_icon_b64("facebook")
         supabase_url = SUPABASE_URL
-        redirect_target = "https://huntjob.cumsille.me"
+        # Va al puente de huntjob_payments, no directo a huntjob.cumsille.me
+        # (ver la nota junto al manejo de st.query_params mas arriba).
+        redirect_target = "https://huntjob-payments.onrender.com/auth/bridge"
         url_google = f"{supabase_url}/auth/v1/authorize?provider=google&redirect_to={redirect_target}"
         url_github = f"{supabase_url}/auth/v1/authorize?provider=github&redirect_to={redirect_target}"
         url_facebook = f"{supabase_url}/auth/v1/authorize?provider=facebook&redirect_to={redirect_target}"
