@@ -143,13 +143,23 @@ def mostrar_faq() -> None:
 # navegue la ventana principal sin un click real de por medio ("user
 # activation"). Sin esto, el login quedaba pegado para siempre con el
 # token en el fragmento — el login "no hacía nada" para cualquier usuario.
+#
+# El alto del iframe queda FIJO en 54px siempre (no se resize dinámico
+# con JS): Streamlit reserva el espacio en su propio layout según el
+# height que se le pasa acá en Python, y cambiarlo desde adentro con
+# window.frameElement.style.height no se lo comunica al layout — el
+# botón quedaba pintado encima, pero otro elemento de Streamlit (que sí
+# vive en el flujo normal del documento) quedaba superpuesto arriba y
+# se comía el click. Con el espacio siempre reservado, no hay overlap.
 components.html(
     """
     <style>
+    body { margin: 0; }
     #hj-continuar-btn {
         display: none;
         width: 100%;
-        padding: 12px;
+        height: 54px;
+        padding: 0;
         border: none;
         border-radius: 10px;
         background: #C87FA0;
@@ -166,7 +176,6 @@ components.html(
     if (hash && hash.includes('access_token')) {
         const boton = document.getElementById('hj-continuar-btn');
         boton.style.display = 'block';
-        window.frameElement.style.height = '54px';
         boton.addEventListener('click', function() {
             const params = new URLSearchParams(hash.substring(1));
             const url = new URL(window.parent.location.href);
@@ -177,7 +186,7 @@ components.html(
     }
     </script>
     """,
-    height=0,
+    height=54,
 )
 
 if not st.session_state.get("autenticado", False):
