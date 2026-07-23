@@ -24,11 +24,42 @@ class ErrorScraping(Exception):
     pass
 
 
+def _limpiar_html_a_markdown_estructurado(soup: BeautifulSoup) -> str:
+    """
+    Inspirado en Crawl4AI: Elimina elementos de ruido (nav, footer, cookies, ads)
+    y convierte el contenido de la oferta en Markdown estructurado limpio para la IA.
+    """
+    for etiqueta in soup(["script", "style", "noscript", "nav", "footer", "header", "form", "svg", "iframe"]):
+        etiqueta.extract()
+
+    for elemento_ruido in soup.select(".cookie-banner, #cookie-banner, .advertisement, .ads, .share-buttons"):
+        elemento_ruido.extract()
+
+    contenedor = (
+        soup.select_one("article") or
+        soup.select_one("main") or
+        soup.select_one(".job-description") or
+        soup.select_one("#job-description") or
+        soup.select_one(".box_detail") or
+        soup.select_one(".detail_offer") or
+        soup
+    )
+
+    for h in contenedor.find_all(["h1", "h2", "h3", "h4"]):
+        h.string = f"\n\n### {h.get_text(strip=True)}\n"
+
+    for li in contenedor.find_all("li"):
+        li.string = f"\n- {li.get_text(strip=True)}"
+
+    texto_bruto = contenedor.get_text(separator="\n", strip=True)
+    lineas = [l.strip() for l in texto_bruto.split("\n") if l.strip()]
+    return "\n".join(lineas)
+
+
 def extraer_texto_url(url: str) -> str:
     """
-    Descarga una URL de oferta laboral y devuelve el texto plano de la página,
-    sin scripts ni estilos. Lanza ErrorScraping con el detalle exacto del fallo
-    en vez de devolver un string de error silencioso.
+    Descarga una URL de oferta laboral y devuelve el texto estructurado en Markdown,
+    sin scripts ni elementos de navegación. Lanza ErrorScraping en caso de fallo.
     """
     try:
         respuesta = requests.get(url, headers=HEADERS, timeout=TIMEOUT_SEGUNDOS)
@@ -43,10 +74,7 @@ def extraer_texto_url(url: str) -> str:
         raise ErrorScraping(f"{url} respondió con código HTTP {respuesta.status_code}")
 
     soup = BeautifulSoup(respuesta.text, "html.parser")
-    for etiqueta in soup(["script", "style", "noscript"]):
-        etiqueta.extract()
-
-    texto = soup.get_text(separator=" ", strip=True)
+    texto = _limpiar_html_a_markdown_estructurado(soup)
     if not texto:
         raise ErrorScraping(f"La página {url} no devolvió texto extraíble (posible bloqueo o JS puro)")
 
