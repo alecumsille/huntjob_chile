@@ -185,30 +185,14 @@ if not st.session_state.get("autenticado", False):
             st.session_state["user_email"] = usuario["email"]
             st.session_state["access_token"] = token_url
             st.session_state["proveedor_auth"] = usuario["proveedor"]
-            
-            # Guardar token en localStorage para recordar sesión al volver
-            components.html(
-                f"""
-                <script>
-                try {{
-                    const store = (window.parent && window.parent.localStorage) ? window.parent.localStorage : window.localStorage;
-                    store.setItem('hj_access_token', '{token_url}');
-                }} catch(e) {{
-                    console.error('Error al guardar token de sesión:', e);
-                }}
-                </script>
-                """,
-                height=0,
-            )
-            st.query_params.clear()
-            st.rerun()
         else:
             st.query_params.clear()
             components.html(
                 """
                 <script>
                 try {
-                    const store = (window.parent && window.parent.localStorage) ? window.parent.localStorage : window.localStorage;
+                    const parentWin = window.parent || window.top;
+                    const store = (parentWin && parentWin.localStorage) ? parentWin.localStorage : window.localStorage;
                     store.removeItem('hj_access_token');
                 } catch(e) {}
                 </script>
@@ -216,18 +200,33 @@ if not st.session_state.get("autenticado", False):
                 height=0,
             )
     else:
-        # Intentar auto-restaurar sesión desde localStorage si el usuario re-ingresa a la web
+        # Intentar auto-restaurar sesión desde localStorage o fragmento hash de Supabase
         components.html(
             """
             <script>
             try {
                 const parentWin = window.parent || window.top;
                 const store = (parentWin && parentWin.localStorage) ? parentWin.localStorage : window.localStorage;
-                const savedToken = store.getItem('hj_access_token');
-                if (savedToken && !parentWin.location.search.includes('access_token')) {
-                    const url = new URL(parentWin.location.href);
-                    url.searchParams.set('access_token', savedToken);
-                    parentWin.location.href = url.toString();
+                
+                // 1. Si Supabase devolvió un hash (#access_token=...)
+                if (parentWin.location.hash && parentWin.location.hash.includes('access_token=')) {
+                    const hashParams = new URLSearchParams(parentWin.location.hash.substring(1));
+                    const token = hashParams.get('access_token');
+                    if (token) {
+                        store.setItem('hj_access_token', token);
+                        const url = new URL(parentWin.location.href);
+                        url.hash = '';
+                        url.searchParams.set('access_token', token);
+                        parentWin.location.href = url.toString();
+                    }
+                } else {
+                    // 2. Si hay token guardado previamente en localStorage
+                    const savedToken = store.getItem('hj_access_token');
+                    if (savedToken && !parentWin.location.search.includes('access_token')) {
+                        const url = new URL(parentWin.location.href);
+                        url.searchParams.set('access_token', savedToken);
+                        parentWin.location.href = url.toString();
+                    }
                 }
             } catch(e) {
                 console.error('Error restaurando sesión:', e);
@@ -236,6 +235,26 @@ if not st.session_state.get("autenticado", False):
             """,
             height=0,
         )
+
+# Si la sesión ya está autenticada, asegurar que el token quede guardado y sincronizado en localStorage
+if st.session_state.get("autenticado") and st.session_state.get("access_token"):
+    tok_actual = st.session_state["access_token"]
+    components.html(
+        f"""
+        <script>
+        try {{
+            const parentWin = window.parent || window.top;
+            const store = (parentWin && parentWin.localStorage) ? parentWin.localStorage : window.localStorage;
+            if (store.getItem('hj_access_token') !== '{tok_actual}') {{
+                store.setItem('hj_access_token', '{tok_actual}');
+            }}
+        }} catch(e) {{
+            console.error('Error sincronizando sesión en localStorage:', e);
+        }}
+        </script>
+        """,
+        height=0,
+    )
 
 if not st.session_state.get("autenticado", False):
     col_a, col_b, col_c = st.columns([1, 2, 1])
