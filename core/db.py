@@ -9,6 +9,7 @@ para firmar la consulta: Row Level Security en Postgres es quien
 garantiza que cada usuario solo ve sus propias filas (ver sql/schema.sql).
 """
 
+import copy
 from datetime import datetime, timezone
 
 from core.auth_supabase import cliente_para_usuario
@@ -22,8 +23,8 @@ def obtener_perfil(user_id: str, access_token: str) -> dict:
     resultado = cliente.table("perfiles").select("*").eq("user_id", user_id).limit(1).execute()
     filas = resultado.data or []
     if not filas:
-        return dict(VALORES_POR_DEFECTO)
-    perfil = dict(VALORES_POR_DEFECTO)
+        return copy.deepcopy(VALORES_POR_DEFECTO)
+    perfil = copy.deepcopy(VALORES_POR_DEFECTO)
     perfil.update({clave: valor for clave, valor in filas[0].items() if clave in VALORES_POR_DEFECTO})
     return perfil
 

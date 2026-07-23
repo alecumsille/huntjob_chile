@@ -13,6 +13,8 @@ Solo el resumen profesional y los bullets de experiencia pasan por IA
 (ver core/postulacion.py y core/motor_ia.py).
 """
 
+import copy
+
 import streamlit as st
 
 VALORES_POR_DEFECTO = {
@@ -83,7 +85,7 @@ def cargar_perfil(contexto_usuario: dict | None) -> dict:
         from core.db import obtener_perfil
         perfil = obtener_perfil(contexto_usuario["user_id"], contexto_usuario["access_token"])
     else:
-        perfil = dict(VALORES_POR_DEFECTO)
+        perfil = copy.deepcopy(VALORES_POR_DEFECTO)
         perfil.update(st.session_state.get("perfil_invitado", {}))
     return _migrar_legado(perfil)
 
