@@ -1,6 +1,8 @@
 import base64
+import copy
 import logging
 import os
+import uuid
 from datetime import datetime
 
 import streamlit as st
@@ -9,7 +11,7 @@ import streamlit.components.v1 as components
 from core.scraper_web import extraer_texto_url, ErrorScraping
 from core.motor_ia import extraer_cargo_y_empresa, analizar_match, sugerir_respuesta, ErrorIA
 from core.portales import PORTALES, buscar_en_todos
-from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY
+from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY, NIVELES_IDIOMA, TIPOS_FORMACION, VALORES_POR_DEFECTO
 from core.postulacion import generar_documentos
 from core.auth_supabase import obtener_usuario_desde_token, cerrar_sesion, SUPABASE_URL
 from core.db import guardar_historial, obtener_historial_reciente, marcar_postulado, verificar_y_consumir_uso, obtener_plan
@@ -855,63 +857,158 @@ elif seccion == "Mi Perfil":
     st.subheader("Mi perfil")
     st.caption(
         "Con estos datos la IA compara ofertas con tu perfil y personaliza tu CV y Cover Letter. "
-        "Tu nombre ya aparece en la firma de la carta."
+        "Formación, competencias, habilidades blandas e idiomas se muestran tal cual los escribas — "
+        "la IA no los reescribe, solo redacta el resumen profesional y pule los bullets de experiencia."
     )
 
     perfil_actual = cargar_perfil(contexto_usuario)
 
-    with st.form("form_perfil"):
-        nombre = st.text_input("Nombre completo", value=perfil_actual["nombre"])
-        with st.container(horizontal=True):
-            email = st.text_input("Email", value=perfil_actual["email"])
-            telefono = st.text_input("Teléfono", value=perfil_actual["telefono"])
-            linkedin = st.text_input("LinkedIn (url o usuario)", value=perfil_actual["linkedin"])
-        anos_experiencia = st.number_input(
-            "Años de experiencia", min_value=0, max_value=60, value=perfil_actual["anos_experiencia"]
-        )
-        seniority_guardado = perfil_actual["seniority"]
-        indice_seniority = (
-            NIVELES_SENIORITY.index(seniority_guardado) if seniority_guardado in NIVELES_SENIORITY else 0
-        )
-        seniority = st.selectbox("Nivel", NIVELES_SENIORITY, index=indice_seniority)
-        stack_principal = st.text_input(
-            "Stack principal (lenguajes, frameworks, herramientas)",
-            value=perfil_actual["stack_principal"],
-        )
-        logros_y_experiencia = st.text_area(
-            "Logros y experiencia (proyectos reales, resultados concretos)",
-            value=perfil_actual["logros_y_experiencia"],
-            height=200,
-        )
+    if "perfil_experiencia_editable" not in st.session_state:
+        st.session_state.perfil_experiencia_editable = [dict(t, _key=str(uuid.uuid4())) for t in perfil_actual["experiencia_laboral"]]
+    if "perfil_formacion_editable" not in st.session_state:
+        st.session_state.perfil_formacion_editable = [dict(f, _key=str(uuid.uuid4())) for f in perfil_actual["formacion_academica"]]
+    if "perfil_idiomas_editable" not in st.session_state:
+        st.session_state.perfil_idiomas_editable = [dict(i, _key=str(uuid.uuid4())) for i in perfil_actual["idiomas"]]
 
-        col_sub1, col_sub2 = st.columns(2)
-        with col_sub1:
-            if st.form_submit_button("Guardar perfil", icon=":material/save:", type="primary", use_container_width=True):
+    nombre = st.text_input("Nombre completo", value=perfil_actual["nombre"])
+    with st.container(horizontal=True):
+        ciudad = st.text_input("Ciudad / Comuna", value=perfil_actual["ciudad"])
+        email = st.text_input("Email", value=perfil_actual["email"])
+        telefono = st.text_input("Teléfono", value=perfil_actual["telefono"])
+        linkedin = st.text_input("LinkedIn (url o usuario)", value=perfil_actual["linkedin"])
+    anos_experiencia = st.number_input(
+        "Años de experiencia", min_value=0, max_value=60, value=perfil_actual["anos_experiencia"]
+    )
+    seniority_guardado = perfil_actual["seniority"]
+    indice_seniority = (
+        NIVELES_SENIORITY.index(seniority_guardado) if seniority_guardado in NIVELES_SENIORITY else 0
+    )
+    seniority = st.selectbox("Nivel", NIVELES_SENIORITY, index=indice_seniority)
+
+    st.divider()
+    st.markdown("#### Experiencia laboral")
+    for indice, trabajo in enumerate(st.session_state.perfil_experiencia_editable):
+        clave = trabajo["_key"]
+        with st.container(border=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                trabajo["cargo"] = st.text_input("Cargo", value=trabajo.get("cargo", ""), key=f"exp_cargo_{clave}")
+                trabajo["fecha_inicio"] = st.text_input(
+                    "Fecha inicio (ej. Marzo 2021)", value=trabajo.get("fecha_inicio", ""), key=f"exp_fi_{clave}"
+                )
+            with col2:
+                trabajo["empresa"] = st.text_input("Empresa", value=trabajo.get("empresa", ""), key=f"exp_empresa_{clave}")
+                trabajo["actualidad"] = st.checkbox(
+                    "Trabajo actual", value=trabajo.get("actualidad", False), key=f"exp_act_{clave}"
+                )
+                trabajo["fecha_fin"] = "" if trabajo["actualidad"] else st.text_input(
+                    "Fecha término (ej. Enero 2024)", value=trabajo.get("fecha_fin", ""), key=f"exp_ff_{clave}"
+                )
+            trabajo["funciones"] = st.text_area(
+                "Funciones y responsabilidades (una por línea)",
+                value=trabajo.get("funciones", ""),
+                key=f"exp_func_{clave}",
+                height=100,
+            )
+            if st.button("🗑 Quitar esta experiencia", key=f"exp_quitar_{clave}"):
+                st.session_state.perfil_experiencia_editable.pop(indice)
+                st.rerun()
+    if st.button("+ Agregar experiencia laboral", icon=":material/add:", key="exp_agregar"):
+        st.session_state.perfil_experiencia_editable.append(
+            {"cargo": "", "empresa": "", "fecha_inicio": "", "fecha_fin": "", "actualidad": False, "funciones": "", "_key": str(uuid.uuid4())}
+        )
+        st.rerun()
+
+    st.divider()
+    st.markdown("#### Formación académica")
+    for indice, estudio in enumerate(st.session_state.perfil_formacion_editable):
+        clave = estudio["_key"]
+        with st.container(border=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                estudio["titulo"] = st.text_input("Título / carrera", value=estudio.get("titulo", ""), key=f"form_titulo_{clave}")
+                estudio["institucion"] = st.text_input("Institución", value=estudio.get("institucion", ""), key=f"form_inst_{clave}")
+            with col2:
+                tipo_guardado = estudio.get("tipo", "Carrera")
+                indice_tipo = TIPOS_FORMACION.index(tipo_guardado) if tipo_guardado in TIPOS_FORMACION else 0
+                estudio["tipo"] = st.selectbox("Tipo", TIPOS_FORMACION, index=indice_tipo, key=f"form_tipo_{clave}")
+                estudio["fecha_inicio"] = st.text_input("Año inicio", value=estudio.get("fecha_inicio", ""), key=f"form_fi_{clave}")
+                estudio["fecha_fin"] = st.text_input("Año término", value=estudio.get("fecha_fin", ""), key=f"form_ff_{clave}")
+            if st.button("🗑 Quitar esta formación", key=f"form_quitar_{clave}"):
+                st.session_state.perfil_formacion_editable.pop(indice)
+                st.rerun()
+    if st.button("+ Agregar formación académica", icon=":material/add:", key="form_agregar"):
+        st.session_state.perfil_formacion_editable.append(
+            {"titulo": "", "institucion": "", "fecha_inicio": "", "fecha_fin": "", "tipo": "Carrera", "_key": str(uuid.uuid4())}
+        )
+        st.rerun()
+
+    st.divider()
+    st.markdown("#### Idiomas")
+    for indice, idioma in enumerate(st.session_state.perfil_idiomas_editable):
+        clave = idioma["_key"]
+        with st.container(border=True):
+            col1, col2, col3 = st.columns([2, 2, 1])
+            with col1:
+                idioma["idioma"] = st.text_input("Idioma", value=idioma.get("idioma", ""), key=f"idi_nombre_{clave}")
+            with col2:
+                nivel_guardado = idioma.get("nivel", "Intermedio")
+                indice_nivel = NIVELES_IDIOMA.index(nivel_guardado) if nivel_guardado in NIVELES_IDIOMA else 1
+                idioma["nivel"] = st.selectbox("Nivel", NIVELES_IDIOMA, index=indice_nivel, key=f"idi_nivel_{clave}")
+            with col3:
+                if st.button("🗑", key=f"idi_quitar_{clave}"):
+                    st.session_state.perfil_idiomas_editable.pop(indice)
+                    st.rerun()
+    if st.button("+ Agregar idioma", icon=":material/add:", key="idi_agregar"):
+        st.session_state.perfil_idiomas_editable.append({"idioma": "", "nivel": "Intermedio", "_key": str(uuid.uuid4())})
+        st.rerun()
+
+    st.divider()
+    competencias_tecnicas = st.text_area(
+        "Competencias técnicas y manejo de software (una por línea)",
+        value=perfil_actual["competencias_tecnicas"],
+        height=120,
+    )
+    habilidades_blandas = st.text_area(
+        "Habilidades blandas (una por línea)",
+        value=perfil_actual["habilidades_blandas"],
+        height=120,
+    )
+
+    col_sub1, col_sub2 = st.columns(2)
+    with col_sub1:
+        if st.button("Guardar perfil", icon=":material/save:", type="primary", use_container_width=True):
+            try:
                 guardar_perfil(contexto_usuario, {
                     "nombre": nombre,
                     "email": email,
                     "telefono": telefono,
                     "linkedin": linkedin,
+                    "ciudad": ciudad,
                     "anos_experiencia": anos_experiencia,
                     "seniority": seniority,
-                    "stack_principal": stack_principal,
-                    "logros_y_experiencia": logros_y_experiencia,
-                })
-                st.success("Perfil guardado.", icon=":material/check_circle:")
-        with col_sub2:
-            if st.form_submit_button("Limpiar campos del perfil", icon=":material/delete:", use_container_width=True):
-                guardar_perfil(contexto_usuario, {
-                    "nombre": "",
-                    "email": "",
-                    "telefono": "",
-                    "linkedin": "",
-                    "anos_experiencia": 0,
-                    "seniority": "Junior",
+                    "competencias_tecnicas": competencias_tecnicas,
+                    "habilidades_blandas": habilidades_blandas,
+                    "experiencia_laboral": [{k: v for k, v in t.items() if k != "_key"} for t in st.session_state.perfil_experiencia_editable],
+                    "formacion_academica": [{k: v for k, v in f.items() if k != "_key"} for f in st.session_state.perfil_formacion_editable],
+                    "idiomas": [{k: v for k, v in i.items() if k != "_key"} for i in st.session_state.perfil_idiomas_editable],
                     "stack_principal": "",
                     "logros_y_experiencia": "",
                 })
+                st.success("Perfil guardado.", icon=":material/check_circle:")
+            except Exception as e:
+                st.error(f"No se pudo guardar tu perfil: {e}", icon=":material/error:")
+    with col_sub2:
+        if st.button("Limpiar campos del perfil", icon=":material/delete:", use_container_width=True):
+            try:
+                guardar_perfil(contexto_usuario, copy.deepcopy(VALORES_POR_DEFECTO))
+                st.session_state.perfil_experiencia_editable = []
+                st.session_state.perfil_formacion_editable = []
+                st.session_state.perfil_idiomas_editable = []
                 st.success("Perfil limpiado correctamente.", icon=":material/check_circle:")
                 st.rerun()
+            except Exception as e:
+                st.error(f"No se pudo limpiar el perfil: {e}", icon=":material/error:")
 
 # -------------------------------------------------------------
 # SECCIÓN 5: PREGUNTAS DE POSTULACIÓN

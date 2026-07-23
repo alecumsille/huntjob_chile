@@ -89,3 +89,13 @@ alter table public.planes_usuario
 -- de facturar localmente mientras Flow sigue cobrando (2026-07-22).
 alter table public.planes_usuario
     add column if not exists flow_subscription_id text;
+
+-- Migración 2026-07-22: perfil enriquecido (formación, experiencia
+-- estructurada, idiomas, habilidades, ciudad). Ver
+-- docs/superpowers/specs/2026-07-22-cv-enriquecido-design.md
+alter table public.perfiles add column if not exists ciudad text default '';
+alter table public.perfiles add column if not exists experiencia_laboral jsonb default '[]';
+alter table public.perfiles add column if not exists formacion_academica jsonb default '[]';
+alter table public.perfiles add column if not exists idiomas jsonb default '[]';
+alter table public.perfiles add column if not exists habilidades_blandas text default '';
+alter table public.perfiles add column if not exists competencias_tecnicas text default '';

@@ -234,3 +234,66 @@ def sugerir_respuesta(pregunta: str, perfil: dict, opciones: list[str] | None = 
         return {"respuesta": str(resultado["respuesta"]), "justificacion": str(resultado["justificacion"])}
     except Exception as e:
         raise ErrorIA(f"Error procesando sugerencia de respuesta: {e}")
+
+
+def pulir_experiencia_laboral(experiencia_laboral: list[dict], puesto_objetivo: str, texto_oferta: str) -> list[list[str]]:
+    """
+    Por cada trabajo, pide a la IA una versión reordenada/pulida de sus
+    'funciones' ya cargadas, priorizando lo relevante para la oferta.
+    Nunca inventa funciones nuevas ni recibe de vuelta cargo/empresa/
+    fechas — esos campos ni se le piden, solo van como contexto de
+    lectura. Devuelve una lista paralela a `experiencia_laboral`: una
+    lista de bullets por cada trabajo, en el mismo orden. Ante
+    cualquier falla (IA caída, JSON inválido, cantidad de trabajos
+    distinta a la esperada), cada trabajo cae de vuelta a sus funciones
+    tal cual el usuario las escribió — nunca se pierde información, en
+    el peor caso queda sin pulir.
+    """
+    from core.perfil import lineas_no_vacias
+
+    bullets_originales = [lineas_no_vacias(trabajo.get("funciones", "")) for trabajo in experiencia_laboral]
+    trabajos_con_funciones = [
+        (indice, trabajo) for indice, trabajo in enumerate(experiencia_laboral) if bullets_originales[indice]
+    ]
+    if not trabajos_con_funciones:
+        return bullets_originales
+
+    bloques = []
+    for numero, (indice, trabajo) in enumerate(trabajos_con_funciones, start=1):
+        funciones_texto = "\n".join(f"- {f}" for f in bullets_originales[indice])
+        bloques.append(f"Trabajo {numero} — {trabajo.get('cargo', '')} en {trabajo.get('empresa', '')}:\n{funciones_texto}")
+
+    prompt = (
+        f"Eres un editor de currículums. A continuación hay {len(bloques)} trabajos de la experiencia "
+        f"laboral real de un candidato que postula a '{puesto_objetivo}'. Para cada uno, reordena y pule "
+        "la redacción de sus funciones ya escritas, dando prioridad a lo más relevante para la oferta de "
+        "abajo. NUNCA agregues una función, herramienta o logro que no esté ya en el texto original de "
+        "ese trabajo — solo puedes reordenar, resumir o mejorar la redacción de lo que ya está.\n\n"
+        "Responde ÚNICAMENTE un objeto JSON con la llave \"bullets_por_trabajo\": una lista de listas de "
+        f"strings, en el MISMO ORDEN y con EXACTAMENTE {len(bloques)} elementos (uno por trabajo, en el "
+        "orden en que aparecen abajo).\n\n"
+        + "\n\n".join(bloques)
+        + f"\n\nOferta laboral:\n{texto_oferta[:LIMITE_CARACTERES_CONTEXTO]}"
+    )
+    schema = {
+        "type": "OBJECT",
+        "properties": {
+            "bullets_por_trabajo": {"type": "ARRAY", "items": {"type": "ARRAY", "items": {"type": "STRING"}}},
+        },
+        "required": ["bullets_por_trabajo"],
+    }
+
+    try:
+        texto_res = _ejecutar_con_fallback(prompt, response_mime_type="application/json", response_schema=schema)
+        resultado = json.loads(texto_res)
+        pulido = resultado.get("bullets_por_trabajo", [])
+        if len(pulido) != len(bloques):
+            raise ValueError("La IA devolvió una cantidad de trabajos distinta a la esperada.")
+    except Exception:
+        return bullets_originales
+
+    bullets_finales = list(bullets_originales)
+    for (indice, _trabajo), bullets_pulidos in zip(trabajos_con_funciones, pulido):
+        limpios = [str(b).strip() for b in bullets_pulidos if str(b).strip()]
+        bullets_finales[indice] = limpios or bullets_originales[indice]
+    return bullets_finales
