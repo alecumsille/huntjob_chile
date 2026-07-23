@@ -978,31 +978,37 @@ elif seccion == "Mi Perfil":
     col_sub1, col_sub2 = st.columns(2)
     with col_sub1:
         if st.button("Guardar perfil", icon=":material/save:", type="primary", use_container_width=True):
-            guardar_perfil(contexto_usuario, {
-                "nombre": nombre,
-                "email": email,
-                "telefono": telefono,
-                "linkedin": linkedin,
-                "ciudad": ciudad,
-                "anos_experiencia": anos_experiencia,
-                "seniority": seniority,
-                "competencias_tecnicas": competencias_tecnicas,
-                "habilidades_blandas": habilidades_blandas,
-                "experiencia_laboral": [{k: v for k, v in t.items() if k != "_key"} for t in st.session_state.perfil_experiencia_editable],
-                "formacion_academica": [{k: v for k, v in f.items() if k != "_key"} for f in st.session_state.perfil_formacion_editable],
-                "idiomas": [{k: v for k, v in i.items() if k != "_key"} for i in st.session_state.perfil_idiomas_editable],
-                "stack_principal": "",
-                "logros_y_experiencia": "",
-            })
-            st.success("Perfil guardado.", icon=":material/check_circle:")
+            try:
+                guardar_perfil(contexto_usuario, {
+                    "nombre": nombre,
+                    "email": email,
+                    "telefono": telefono,
+                    "linkedin": linkedin,
+                    "ciudad": ciudad,
+                    "anos_experiencia": anos_experiencia,
+                    "seniority": seniority,
+                    "competencias_tecnicas": competencias_tecnicas,
+                    "habilidades_blandas": habilidades_blandas,
+                    "experiencia_laboral": [{k: v for k, v in t.items() if k != "_key"} for t in st.session_state.perfil_experiencia_editable],
+                    "formacion_academica": [{k: v for k, v in f.items() if k != "_key"} for f in st.session_state.perfil_formacion_editable],
+                    "idiomas": [{k: v for k, v in i.items() if k != "_key"} for i in st.session_state.perfil_idiomas_editable],
+                    "stack_principal": "",
+                    "logros_y_experiencia": "",
+                })
+                st.success("Perfil guardado.", icon=":material/check_circle:")
+            except Exception as e:
+                st.error(f"No se pudo guardar tu perfil: {e}", icon=":material/error:")
     with col_sub2:
         if st.button("Limpiar campos del perfil", icon=":material/delete:", use_container_width=True):
-            guardar_perfil(contexto_usuario, copy.deepcopy(VALORES_POR_DEFECTO))
-            st.session_state.perfil_experiencia_editable = []
-            st.session_state.perfil_formacion_editable = []
-            st.session_state.perfil_idiomas_editable = []
-            st.success("Perfil limpiado correctamente.", icon=":material/check_circle:")
-            st.rerun()
+            try:
+                guardar_perfil(contexto_usuario, copy.deepcopy(VALORES_POR_DEFECTO))
+                st.session_state.perfil_experiencia_editable = []
+                st.session_state.perfil_formacion_editable = []
+                st.session_state.perfil_idiomas_editable = []
+                st.success("Perfil limpiado correctamente.", icon=":material/check_circle:")
+                st.rerun()
+            except Exception as e:
+                st.error(f"No se pudo limpiar el perfil: {e}", icon=":material/error:")
 
 # -------------------------------------------------------------
 # SECCIÓN 5: PREGUNTAS DE POSTULACIÓN
