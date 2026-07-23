@@ -588,23 +588,33 @@ with st.sidebar:
             pass
     else:
         st.caption("Modo invitado — datos no guardados")
+        with st.expander("💎 Migrar a Plan Premium ($4.990 CLP/mes)", expanded=True):
+            st.markdown(
+                """
+                **¡Desbloquea todas las funcionalidades de Inteligencia Artificial!**
 
-    if st.button("Cerrar Sesión", icon=":material/logout:", use_container_width=True):
-        if contexto_usuario:
-            cerrar_sesion(contexto_usuario["access_token"])
-        st.session_state.clear()
-        components.html(
-            """
-            <script>
-            try {
-                const store = (window.parent && window.parent.localStorage) ? window.parent.localStorage : window.localStorage;
-                store.removeItem('hj_access_token');
-            } catch(e) {}
-            </script>
-            """,
-            height=0,
-        )
-        st.rerun()
+                #### ✨ Beneficios del Plan Premium:
+                - 🚀 **Generaciones Ilimitadas** de CVs y Cartas de Presentación por oferta.
+                - 💾 **Persistencia Total:** Tu perfil y postulaciones guardados de forma segura en la nube.
+                - ⚡ **Inyección ATS 1-Click:** Incorpora de inmediato las palabras clave faltantes en tu CV.
+                - 📊 **Tablero Kanban & Analítica:** Monitorea métricas y etapas de selección.
+                - 🔔 **Alertas Diarias por Email:** Recibe ofertas filtradas con sueldos transparentes.
+
+                ---
+                #### 💳 Medios y Opciones de Pago (vía Flow Chile):
+                - 💳 **Tarjetas de Débito y Crédito** (Webpay Plus, Visa, Mastercard, Redcompra).
+                - 📲 **Billeteras Digitales** (MACH, Chek, Fpay).
+                - 🏦 **Transferencia Bancaria Directa** (Khipu, BancoEstado, Banco de Chile, BCI).
+                - 🛒 **Pago Presencial en Efectivo** (Servipag, Caja Vecina).
+                
+                ---
+                *Inicia sesión con Google, GitHub o Facebook para vincular tu suscripción a tu cuenta personal.*
+                """
+            )
+            if st.button("🔑 Iniciar Sesión para Activar Premium", type="primary", use_container_width=True):
+                st.session_state["autenticado"] = False
+                st.session_state["proveedor_auth"] = None
+                st.rerun()
     st.divider()
     seccion = st.radio(
         "Panel",
