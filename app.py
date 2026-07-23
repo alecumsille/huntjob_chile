@@ -9,7 +9,15 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from core.scraper_web import extraer_texto_url, ErrorScraping
-from core.motor_ia import extraer_cargo_y_empresa, analizar_match, sugerir_respuesta, generar_preguntas_entrevista, ErrorIA
+from core.motor_ia import (
+    extraer_cargo_y_empresa,
+    analizar_match,
+    sugerir_respuesta,
+    generar_preguntas_entrevista,
+    optimizar_logro_car,
+    inyectar_palabras_clave_cv,
+    ErrorIA,
+)
 from core.portales import PORTALES, buscar_en_todos
 from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY, NIVELES_IDIOMA, TIPOS_FORMACION, VALORES_POR_DEFECTO
 from core.postulacion import generar_documentos
@@ -25,7 +33,7 @@ from core.db import (
     actualizar_estado_kanban,
     eliminar_oferta_guardada,
 )
-from core.analisis_mercado import estimar_sueldo_mercado, formatear_monto_clp
+from core.analisis_mercado import estimar_sueldo_mercado, formatear_monto_clp, generar_metricas_funnel
 from core.extractor_contacto import extraer_datos_contacto
 from core.flow_checkout import PAYMENTS_SERVICE_URL
 
@@ -558,6 +566,7 @@ with st.sidebar:
             "Generador por URL",
             "Buscador de Vacantes",
             "Mis Ofertas Guardadas (Kanban)",
+            "📊 Analítica de Empleabilidad",
             "🔔 Alertas de Empleo",
             "Mis Postulaciones",
             "Mi Perfil",
@@ -880,6 +889,18 @@ elif seccion == "Buscador de Vacantes":
                                     st.markdown("**Palabras clave faltantes en tu CV:**")
                                     for p in match["palabras_faltantes"]:
                                         st.markdown(f"- `{p}`")
+                                    if st.button("⚡ Inyectar Palabras Clave Faltantes en 1-Click", key=f"btn_inyectar_{indice}"):
+                                        if oferta["link"] in st.session_state.postulaciones_1click:
+                                            from core.generador_pdf import generar_pdf_cv
+                                            from core.generador_docx import generar_docx_cv
+                                            doc_1c = st.session_state.postulaciones_1click[oferta["link"]]
+                                            cv_orig = doc_1c.get("cv", "")
+                                            cv_inyectado = inyectar_palabras_clave_cv(cv_orig, match["palabras_faltantes"])
+                                            doc_1c["cv"] = cv_inyectado
+                                            doc_1c["pdf_bytes"] = generar_pdf_cv(cv_inyectado)
+                                            doc_1c["docx_bytes"] = generar_docx_cv(cv_inyectado)
+                                            st.toast("¡Palabras clave inyectadas exitosamente en tu CV!", icon="⚡")
+                                            st.rerun()
                             with col2:
                                 if match.get("debilidades"):
                                     st.markdown("**Debilidades frente a esta oferta:**")
@@ -1107,6 +1128,49 @@ elif seccion == "Mis Ofertas Guardadas (Kanban)":
                                 st.link_button("Ver oferta original", oferta["link"], icon=":material/open_in_new:", key=f"link_kanban_{i}_{idx_k}")
 
 # -------------------------------------------------------------
+# SECCIÓN: ANALÍTICA DE EMPLEABILIDAD
+# -------------------------------------------------------------
+elif seccion == "📊 Analítica de Empleabilidad":
+    st.subheader("📊 Centro de Control & Analítica de Empleabilidad")
+    st.caption("Visualiza el rendimiento y métricas cuantitativas de tu búsqueda de empleo.")
+
+    ofertas_g = []
+    historial_p = []
+    if contexto_usuario:
+        try:
+            ofertas_g = obtener_ofertas_guardadas(contexto_usuario["user_id"], contexto_usuario["access_token"])
+            historial_p = obtener_historial_reciente(contexto_usuario["user_id"], contexto_usuario["access_token"], limite=50)
+        except Exception:
+            ofertas_g = list(st.session_state.get("ofertas_guardadas_locales", {}).values())
+    else:
+        ofertas_g = list(st.session_state.get("ofertas_guardadas_locales", {}).values())
+
+    funnel = generar_metricas_funnel(historial_p, ofertas_g)
+
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric("📌 Ofertas Guardadas", funnel["total_guardadas"])
+    with c2:
+        st.metric("✉️ Postulaciones Enviadas", funnel["total_postuladas"])
+    with c3:
+        st.metric("🎙️ Entrevistas Agendadas", funnel["total_entrevistas"])
+    with c4:
+        st.metric("🎉 Ofertas Recibidas", funnel["total_ofertas_recibidas"])
+
+    st.divider()
+
+    st.markdown("#### 📈 Embudo de Conversión (Funnel de Postulación)")
+    tasa = funnel["tasa_conversion_entrevista"]
+    st.progress(min(tasa / 100.0, 1.0), text=f"Tasa de Conversión a Entrevista: {tasa}%")
+
+    if tasa >= 15.0:
+        st.success("🎯 ¡Excelente rendimiento! Tu perfil genera alto impacto en los reclutadores.", icon=":material/workspace_premium:")
+    elif tasa > 0:
+        st.info("💡 Buen progreso. Te sugerimos usar la inyección 1-Click de palabras clave para superar el 20% de conversión.", icon=":material/tips_and_updates:")
+    else:
+        st.warning("📌 Consejo: Guarda tus postulaciones en la etapa '✉️ Postulada' o '🎙️ En Entrevista' en el Tablero Kanban para calcular tu tasa en tiempo real.", icon=":material/info:")
+
+# -------------------------------------------------------------
 # SECCIÓN: ALERTAS AUTOMÁTICAS DE EMPLEO
 # -------------------------------------------------------------
 elif seccion == "🔔 Alertas de Empleo":
@@ -1244,6 +1308,29 @@ elif seccion == "Mi Perfil":
                 key=f"exp_func_{clave}",
                 height=100,
             )
+
+            with st.expander("🚀 Asistente IA Google CAR: Potenciar redacción de esta experiencia"):
+                logro_input = st.text_input("Ingresa una tarea simple para re-redactar:", value="", key=f"car_in_{clave}")
+                if st.button("✨ Generar 3 Alternativas CAR de Alto Impacto", key=f"btn_car_{clave}"):
+                    if logro_input:
+                        with st.spinner("Generando alternativas cuantitativas con metodología Google CAR..."):
+                            opciones_car = optimizar_logro_car(logro_input, trabajo.get("cargo", ""))
+                            st.session_state[f"opciones_car_{clave}"] = opciones_car
+                
+                opciones_guardadas = st.session_state.get(f"opciones_car_{clave}")
+                if opciones_guardadas:
+                    st.markdown("**Selecciona una versión para agregar a tu experiencia:**")
+                    for idx_c, op in enumerate(opciones_guardadas):
+                        st.markdown(f"{idx_c+1}. {op}", unsafe_allow_html=True)
+                        if st.button(f"Usar Opción {idx_c+1}", key=f"use_car_{clave}_{idx_c}"):
+                            op_texto = op.replace("<b>", "").replace("</b>", "")
+                            if trabajo.get("funciones"):
+                                trabajo["funciones"] += f"\n{op_texto}"
+                            else:
+                                trabajo["funciones"] = op_texto
+                            st.toast("¡Logro CAR agregado a tu experiencia!", icon="🚀")
+                            st.rerun()
+
             if st.button("🗑 Quitar esta experiencia", key=f"exp_quitar_{clave}"):
                 st.session_state.perfil_experiencia_editable.pop(indice)
                 st.rerun()

@@ -106,22 +106,29 @@ def _llamar_groq(prompt: str, json_mode: bool = False) -> str:
 
 
 def _ejecutar_con_fallback(prompt: str, response_mime_type: str | None = None, response_schema: dict | None = None) -> str:
-    """Intenta primero con Gemini. Si falla (por cuota 429 u otro error) e intenta con Groq."""
+    """Intenta primero con Gemini. Si falla (por cuota 429 u otro error) e intenta con Groq. Aplica Privacy Shield."""
+    from core.privacy_shield import anonimizar_datos_sensibles, restaurar_datos_sensibles
+
+    prompt_seguro, mapa_privacidad = anonimizar_datos_sensibles(prompt)
     errores = []
+    respuesta_bruta = None
 
     # 1. Intentar Gemini
     try:
-        return _llamar_gemini(prompt, response_mime_type, response_schema)
+        respuesta_bruta = _llamar_gemini(prompt_seguro, response_mime_type, response_schema)
     except ErrorIA as e:
         errores.append(f"Gemini: {e}")
 
     # 2. Intentar Groq como respaldo si está disponible
-    if _obtener_key("GROQ_API_KEY"):
+    if respuesta_bruta is None and _obtener_key("GROQ_API_KEY"):
         json_mode = (response_mime_type == "application/json")
         try:
-            return _llamar_groq(prompt, json_mode=json_mode)
+            respuesta_bruta = _llamar_groq(prompt_seguro, json_mode=json_mode)
         except ErrorIA as e:
             errores.append(f"Groq: {e}")
+
+    if respuesta_bruta is not None:
+        return restaurar_datos_sensibles(respuesta_bruta, mapa_privacidad)
 
     # Si ninguno funcionó
     if not _obtener_key("GEMINI_API_KEY") and not _obtener_key("GROQ_API_KEY"):
@@ -396,3 +403,60 @@ def pulir_experiencia_laboral(experiencia_laboral: list[dict], puesto_objetivo: 
         limpios = [str(b).strip() for b in bullets_pulidos if str(b).strip()]
         bullets_finales[indice] = limpios or bullets_originales[indice]
     return bullets_finales
+
+
+def optimizar_logro_car(logro_bruto: str, cargo: str = "") -> list[str]:
+    """
+    Toma una frase simple de experiencia laboral y genera 3 alternativas
+    estructuradas bajo la metodología Google CAR (Contexto - Acción - Resultado).
+    """
+    prompt = (
+        f"Eres un consultor experto en redacción de CVs para superar filtros ATS y reclutadores de elite. "
+        f"Toma el siguiente logro o tarea de experiencia laboral (Cargo: {cargo or 'General'}) y reescríbelo en 3 "
+        f"versiones alternativas de alto impacto usando la metodología Google CAR (Contexto, Acción, Resultado).\n"
+        f"Reglas de formato estrictas:\n"
+        f"1. Cada alternativa debe incluir un impacto o métrica cuantitativa estimada (ej. 'incrementando un 25%', 'reduciendo tiempos en un 30%').\n"
+        f"2. Encierra en etiquetas HTML <b>...</b> las herramientas tecnológicas y palabras clave principales.\n"
+        f"3. Responde ÚNICAMENTE un objeto JSON con la llave \"opciones\": una lista de 3 strings.\n\n"
+        f"Texto original:\n{logro_bruto}"
+    )
+    schema = {
+        "type": "OBJECT",
+        "properties": {"opciones": {"type": "ARRAY", "items": {"type": "STRING"}}},
+        "required": ["opciones"],
+    }
+    try:
+        texto_res = _ejecutar_con_fallback(prompt, response_mime_type="application/json", response_schema=schema)
+        resultado = json.loads(texto_res)
+        return resultado.get("opciones", [])
+    except Exception:
+        return [
+            f"Lideré la optimización de procesos técnicos utilizando <b>{cargo or 'herramientas clave'}</b>, incrementando la eficiencia operativa en un <b>25%</b>.",
+            f"Diseñé e implementé soluciones estratégicas con <b>{cargo or 'tecnología del área'}</b>, reduciendo los tiempos de respuesta en un <b>30%</b>.",
+            f"Gestioné proyectos clave del área aplicando <b>mejores prácticas</b>, alcanzando un <b>95%</b> de cumplimiento de objetivos.",
+        ]
+
+
+def inyectar_palabras_clave_cv(cv_texto: str, palabras_faltantes: list[str]) -> str:
+    """
+    Inyecta estratégicamente las palabras clave faltantes en las viñetas del CV.
+    """
+    if not palabras_faltantes or not cv_texto:
+        return cv_texto
+
+    palabras_str = ", ".join(palabras_faltantes)
+    prompt = (
+        f"Eres un experto optimizador ATS. A continuación se presenta el borrador de un CV y una lista de "
+        f"palabras clave/herramientas que el filtro ATS exige ({palabras_str}).\n"
+        f"Instrucción: Reescribe el CV incorporando de manera fluida y coherente estas palabras clave en las viñetas "
+        f"de experiencia o conocimientos. CRÍTICO: Envuelve cada palabra clave recién incorporada en etiquetas HTML <b> y </b> "
+        f"para destacarla en negrita.\n\n"
+        f"CV Original:\n{cv_texto}"
+    )
+    try:
+        return _ejecutar_con_fallback(prompt)
+    except Exception:
+        cv_modificado = cv_texto
+        for p in palabras_faltantes[:3]:
+            cv_modificado += f"\n- Conocimientos aplicados en <b>{p}</b>."
+        return cv_modificado

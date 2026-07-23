@@ -64,3 +64,35 @@ def formatear_monto_clp(monto: int | None) -> str:
     if monto is None:
         return "No disponible"
     return f"${monto:,.0f} CLP".replace(",", ".")
+
+
+def generar_metricas_funnel(historial_postulaciones: list[dict], ofertas_guardadas: list[dict]) -> dict:
+    """
+    Calcula métricas de empleabilidad para el Dashboard:
+    - total_guardadas
+    - total_postuladas
+    - total_entrevistas
+    - total_ofertas_recibidas
+    - tasa_conversion_entrevista (%)
+    """
+    total_guardadas = len(ofertas_guardadas)
+    
+    postuladas = [o for o in ofertas_guardadas if o.get("estado_kanban") == "✉️ Postulada"]
+    entrevistas = [o for o in ofertas_guardadas if o.get("estado_kanban") == "🎙️ En Entrevista"]
+    recibidas = [o for o in ofertas_guardadas if o.get("estado_kanban") == "🎉 Oferta Recibida"]
+
+    total_postuladas = len(postuladas) + len(historial_postulaciones)
+    total_entrevistas = len(entrevistas)
+    total_ofertas_recibidas = len(recibidas)
+
+    tasa_conversion = 0.0
+    if total_postuladas > 0:
+        tasa_conversion = round((total_entrevistas / total_postuladas) * 100, 1)
+
+    return {
+        "total_guardadas": total_guardadas,
+        "total_postuladas": total_postuladas,
+        "total_entrevistas": total_entrevistas,
+        "total_ofertas_recibidas": total_ofertas_recibidas,
+        "tasa_conversion_entrevista": tasa_conversion,
+    }
