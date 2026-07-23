@@ -122,6 +122,15 @@ def _social_icon_b64(nombre: str) -> str:
     return ""
 
 
+def _github_footer_b64() -> str:
+    """Devuelve el b64 de icons8-github-100.png para el pie de página."""
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icons8-github-100.png")
+    if os.path.exists(ruta):
+        with open(ruta, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    return _social_icon_b64("github")
+
+
 def mostrar_faq() -> None:
     """Contenido estático de preguntas frecuentes — público, no requiere sesión."""
     with st.container(border=True):
@@ -257,14 +266,30 @@ if st.session_state.get("autenticado") and st.session_state.get("access_token"):
     )
 
 if not st.session_state.get("autenticado", False):
+    # CSS para mover todo el contenido hacia arriba reduciendo los margenes superiores de Streamlit
+    st.markdown(
+        """
+        <style>
+        .block-container {
+            padding-top: 0.5rem !important;
+            padding-bottom: 1.5rem !important;
+            max-width: 900px !important;
+        }
+        [data-testid="stAppViewContainer"] > .main {
+            padding-top: 0rem !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
     col_a, col_b, col_c = st.columns([1, 2, 1])
     with col_b:
         st.markdown(
             f"""
-            <div style="text-align: center; padding: 30px 20px; background: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-top: 40px;">
-                <img src="data:image/png;base64,{_logo_b64()}" width="70" style="margin-bottom: 10px;">
+            <div style="text-align: center; padding: 25px 20px; background: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-top: 0px;">
+                <img src="data:image/png;base64,{_logo_b64()}" width="65" style="margin-bottom: 10px;">
                 <h2 style="font-family: 'Quicksand', sans-serif; color: #2D3748; margin-bottom: 5px;">HuntJob Chile</h2>
-                <p style="color: #64748B; font-size: 0.95rem; margin-bottom: 25px;">Selecciona tu cuenta para ingresar:</p>
+                <p style="color: #64748B; font-size: 0.95rem; margin-bottom: 20px;">Selecciona tu cuenta para ingresar:</p>
             </div>
             """,
             unsafe_allow_html=True
@@ -321,8 +346,44 @@ if not st.session_state.get("autenticado", False):
             st.rerun()
         st.caption("En modo invitado tu perfil e historial no se guardan — se pierden al cerrar la pestaña.")
 
+        # Tarjeta No Invasiva de Características Premium
+        st.markdown(
+            """
+            <div style="background: linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%); border-radius: 14px; border: 1px solid #E2E8F0; padding: 18px 20px; margin-top: 15px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                <h4 style="font-family: 'Quicksand', sans-serif; color: #0F172A; margin: 0 0 12px 0; font-size: 1.02rem; display: flex; align-items: center; gap: 8px;">
+                    ✨ <span>Características de la Plataforma</span>
+                </h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; font-size: 0.85rem; color: #334155;">
+                    <div style="background: #FFFFFF; padding: 10px 12px; border-radius: 10px; border: 1px solid #E2E8F0;">
+                        <strong>🎯 Match ATS con IA:</strong><br>Análisis dimensional de coincidencia con ofertas laborales.
+                    </div>
+                    <div style="background: #FFFFFF; padding: 10px 12px; border-radius: 10px; border: 1px solid #E2E8F0;">
+                        <strong>📄 CV PDF en 1-Clic:</strong><br>Optimización de competencias para el mercado chileno.
+                    </div>
+                    <div style="background: #FFFFFF; padding: 10px 12px; border-radius: 10px; border: 1px solid #E2E8F0;">
+                        <strong>⚡ Postulación Preferente:</strong><br>Historial centralizado y métricas de empleabilidad.
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
         with st.expander("¿Qué es HuntJob Chile? Ver preguntas frecuentes (FAQ)"):
             mostrar_faq()
+
+        # Icono de GitHub centrado en el pie de página
+        github_icon_b64 = _github_footer_b64()
+        st.markdown(
+            f"""
+            <div style="text-align: center; margin-top: 25px; margin-bottom: 15px; display: flex; justify-content: center; align-items: center;">
+                <a href="https://github.com/alecumsille" target="_blank" title="Perfil de GitHub — Alejandro Cumsille" style="display: inline-block; text-decoration: none; transition: transform 0.2s ease;">
+                    <img src="data:image/png;base64,{github_icon_b64}" width="40" height="40" alt="Alejandro Cumsille GitHub" style="display: block; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.12));">
+                </a>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     st.stop()
 
