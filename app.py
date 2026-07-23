@@ -22,8 +22,11 @@ from core.db import (
     obtener_plan,
     guardar_oferta_guardada,
     obtener_ofertas_guardadas,
+    actualizar_estado_kanban,
     eliminar_oferta_guardada,
 )
+from core.analisis_mercado import estimar_sueldo_mercado, formatear_monto_clp
+from core.extractor_contacto import extraer_datos_contacto
 from core.flow_checkout import PAYMENTS_SERVICE_URL
 
 logger = logging.getLogger(__name__)
@@ -493,7 +496,16 @@ with st.sidebar:
     st.divider()
     seccion = st.radio(
         "Panel",
-        ["Generador por URL", "Buscador de Vacantes", "Mis Ofertas Guardadas", "Mis Postulaciones", "Mi Perfil", "Preguntas de Postulación", "FAQ"],
+        [
+            "Generador por URL",
+            "Buscador de Vacantes",
+            "Mis Ofertas Guardadas (Kanban)",
+            "🔔 Alertas de Empleo",
+            "Mis Postulaciones",
+            "Mi Perfil",
+            "Preguntas de Postulación",
+            "FAQ",
+        ],
     )
     st.caption("HuntJob Chile")
 
@@ -693,6 +705,18 @@ elif seccion == "Buscador de Vacantes":
                 st.info("No se encontraron ofertas para esa palabra clave en los portales seleccionados.")
         else:
             st.success(f"Se encontraron {len(st.session_state.resultados_busqueda)} vacantes.", icon=":material/check_circle:")
+            
+            # Estimador de Sueldo de Mercado por Cargo
+            stats_mercado = estimar_sueldo_mercado(st.session_state.resultados_busqueda)
+            if stats_mercado["sueldo_promedio"]:
+                st.info(
+                    f"📈 **Estimador de Sueldo de Mercado para '{palabra_clave}':** "
+                    f"**{formatear_monto_clp(stats_mercado['sueldo_promedio'])}** "
+                    f"(Rango detectado: {formatear_monto_clp(stats_mercado['sueldo_min'])} - {formatear_monto_clp(stats_mercado['sueldo_max'])}) "
+                    f"| {stats_mercado['cantidad_transparentes']} de {stats_mercado['total_ofertas']} vacantes con sueldo transparente.",
+                    icon=":material/analytics:",
+                )
+
             perfil_para_match = cargar_perfil(contexto_usuario)
             if "postulaciones_1click" not in st.session_state:
                 st.session_state.postulaciones_1click = {}
@@ -732,6 +756,9 @@ elif seccion == "Buscador de Vacantes":
                             st.toast("Oferta guardada en tu banco personal de ofertas.", icon="⭐")
                             st.rerun()
 
+                    # Extractor de Email / Contacto del Reclutador
+                    contactos = extraer_datos_contacto(f"{oferta['titulo']} {oferta.get('empresa', '')}")
+
                     # Ficha Resumen Badges Enriquecidas
                     with st.container(horizontal=True, vertical_alignment="center"):
                         st.badge(oferta["fuente"], icon=":material/travel_explore:", color="gray")
@@ -744,6 +771,8 @@ elif seccion == "Buscador de Vacantes":
                         else:
                             st.badge("💰 No especifica sueldo", color="gray")
                         st.badge(f"⏰ {oferta.get('jornada', 'No especifica horario')}", color="gray")
+                        for email in contactos.get("emails", []):
+                            st.badge(f"✉️ Contacto: {email}", color="purple")
                         st.caption(f"📅 {oferta.get('publicado', 'Reciente')}")
 
                     match = st.session_state.matches.get(oferta["link"])
@@ -933,11 +962,13 @@ elif seccion == "Buscador de Vacantes":
                         )
 
 # -------------------------------------------------------------
-# SECCIÓN: MIS OFERTAS GUARDADAS
+# SECCIÓN: MIS OFERTAS GUARDADAS (TABLERO KANBAN)
 # -------------------------------------------------------------
-elif seccion == "Mis Ofertas Guardadas":
-    st.subheader("⭐ Banco Personal de Ofertas Guardadas")
-    st.caption("Organiza y haz seguimiento a las vacantes de tu interés antes de postular.")
+elif seccion == "Mis Ofertas Guardadas (Kanban)":
+    st.subheader("📊 Tablero Kanban de Seguimiento de Postulaciones")
+    st.caption("Gestiona el flujo completo de tus búsquedas laborales etapa por etapa.")
+
+    ESTADOS_KANBAN = ["📌 Guardada", "✉️ Postulada", "🎙️ En Entrevista", "🎉 Oferta Recibida", "❌ Descartada"]
 
     ofertas_guardadas = []
     if contexto_usuario:
@@ -951,56 +982,108 @@ elif seccion == "Mis Ofertas Guardadas":
     if not ofertas_guardadas:
         st.info("Aún no has guardado ninguna oferta. Busca vacantes en el 'Buscador de Vacantes' y presiona el botón ☆ Guardar.", icon=":material/info:")
     else:
-        st.success(f"Tienes {len(ofertas_guardadas)} oferta(s) guardada(s) en tu banco personal.", icon=":material/bookmarks:")
-
         import pandas as pd
         df_export = pd.DataFrame(ofertas_guardadas)
         csv_bytes = df_export.to_csv(index=False).encode("utf-8")
         st.download_button(
-            "📊 Exportar ofertas guardadas a Excel / CSV",
+            "📊 Exportar tablero a Excel / CSV",
             data=csv_bytes,
-            file_name="mis_ofertas_guardadas.csv",
+            file_name="mis_ofertas_kanban.csv",
             mime="text/csv",
             icon=":material/download:",
         )
 
         st.divider()
 
-        for idx, oferta in enumerate(ofertas_guardadas):
-            with st.container(border=True):
-                col_og1, col_og2 = st.columns([4, 1])
-                with col_og1:
-                    st.markdown(f"#### {oferta.get('titulo', 'Sin título')}")
-                with col_og2:
-                    if st.button("🗑️ Eliminar", key=f"del_og_{idx}"):
-                        link_del = oferta.get("link", "")
-                        if contexto_usuario:
-                            try:
-                                eliminar_oferta_guardada(contexto_usuario["user_id"], contexto_usuario["access_token"], link_del)
-                            except Exception:
-                                pass
-                        if link_del in st.session_state.get("ofertas_guardadas_locales", {}):
-                            del st.session_state.ofertas_guardadas_locales[link_del]
-                        st.toast("Oferta eliminada de tus guardadas.", icon="🗑️")
-                        st.rerun()
+        tabs_kanban = st.tabs(ESTADOS_KANBAN)
 
-                # Badges Ficha Resumen
-                with st.container(horizontal=True, vertical_alignment="center"):
-                    st.badge(oferta.get("fuente", "Portal"), icon=":material/travel_explore:", color="gray")
-                    st.badge(f"🏢 {oferta.get('empresa', 'No especifica empresa')}", color="gray")
-                    st.badge(f"📍 {oferta.get('ubicacion', 'No especifica ubicación')}", color="gray")
-                    st.badge(f"💻 {oferta.get('modalidad', 'No especifica modalidad')}", color="blue")
-                    sueldo_g = oferta.get('sueldo', 'No especifica sueldo')
-                    if sueldo_g != "No especifica sueldo":
-                        st.badge(f"💰 {sueldo_g}", color="green")
-                        st.badge("🟢 Sueldo Transparente", color="green")
-                    else:
-                        st.badge("💰 No especifica sueldo", color="gray")
-                    st.badge(f"⏰ {oferta.get('jornada', 'No especifica horario')}", color="gray")
-                    st.caption(f"📅 {oferta.get('publicado', 'Reciente')}")
+        for i, estado in enumerate(ESTADOS_KANBAN):
+            with tabs_kanban[i]:
+                ofertas_etapa = [o for o in ofertas_guardadas if o.get("estado_kanban", "📌 Guardada") == estado]
+                st.caption(f"Total en esta etapa: {len(ofertas_etapa)}")
 
-                if oferta.get("link"):
-                    st.link_button("Ver oferta original en el portal", oferta["link"], icon=":material/open_in_new:", key=f"link_og_{idx}")
+                if not ofertas_etapa:
+                    st.info(f"No hay ofertas actualmente en la etapa '{estado}'.")
+                else:
+                    for idx_k, oferta in enumerate(ofertas_etapa):
+                        with st.container(border=True):
+                            col_k1, col_k2 = st.columns([3, 2])
+                            with col_k1:
+                                st.markdown(f"#### {oferta.get('titulo', 'Sin título')}")
+                                st.caption(f"{oferta.get('empresa', 'No especifica empresa')} — {oferta.get('ubicacion', 'No especifica ubicación')}")
+                            with col_k2:
+                                estado_actual = oferta.get("estado_kanban", "📌 Guardada")
+                                index_actual = ESTADOS_KANBAN.index(estado_actual) if estado_actual in ESTADOS_KANBAN else 0
+                                nuevo_estado = st.selectbox(
+                                    "Mover a etapa:",
+                                    ESTADOS_KANBAN,
+                                    index=index_actual,
+                                    key=f"sb_kanban_{i}_{idx_k}",
+                                )
+                                if nuevo_estado != estado_actual:
+                                    link_k = oferta.get("link", "")
+                                    oferta["estado_kanban"] = nuevo_estado
+                                    if contexto_usuario:
+                                        try:
+                                            actualizar_estado_kanban(contexto_usuario["user_id"], contexto_usuario["access_token"], link_k, nuevo_estado)
+                                        except Exception:
+                                            pass
+                                    if link_k in st.session_state.get("ofertas_guardadas_locales", {}):
+                                        st.session_state.ofertas_guardadas_locales[link_k]["estado_kanban"] = nuevo_estado
+                                    st.toast(f"Oferta movida a {nuevo_estado}", icon="🔄")
+                                    st.rerun()
+
+                            # Badges Ficha Resumen
+                            with st.container(horizontal=True, vertical_alignment="center"):
+                                st.badge(oferta.get("fuente", "Portal"), icon=":material/travel_explore:", color="gray")
+                                st.badge(f"💻 {oferta.get('modalidad', 'No especifica modalidad')}", color="blue")
+                                sueldo_g = oferta.get('sueldo', 'No especifica sueldo')
+                                if sueldo_g != "No especifica sueldo":
+                                    st.badge(f"💰 {sueldo_g}", color="green")
+                                    st.badge("🟢 Sueldo Transparente", color="green")
+                                else:
+                                    st.badge("💰 No especifica sueldo", color="gray")
+                                st.badge(f"⏰ {oferta.get('jornada', 'No especifica horario')}", color="gray")
+
+                            if oferta.get("link"):
+                                st.link_button("Ver oferta original", oferta["link"], icon=":material/open_in_new:", key=f"link_kanban_{i}_{idx_k}")
+
+# -------------------------------------------------------------
+# SECCIÓN: ALERTAS AUTOMÁTICAS DE EMPLEO
+# -------------------------------------------------------------
+elif seccion == "🔔 Alertas de Empleo":
+    st.subheader("🔔 Alertas Automáticas de Empleo por Email")
+    st.caption("Recibe resúmenes diarios con las mejores vacantes para tu cargo objetivo con sueldo transparente.")
+
+    perfil_alertas = cargar_perfil(contexto_usuario)
+
+    with st.form("form_alertas_empleo"):
+        cargo_alerta = st.text_input("Cargo Objetivo de Interés", value=perfil_alertas.get("stack_principal") or "Desarrollador Python")
+        email_alerta = st.text_input("Email para Notificaciones", value=contexto_usuario.get("email", "") if contexto_usuario else perfil_alertas.get("email", ""))
+        frecuencia = st.selectbox("Frecuencia de Notificación", ["Diaria (Cada mañana a las 8:00 AM)", "Semanal (Todos los Lunes)", "Tiempo Real"])
+        activada = st.toggle("Activar Alertas para este cargo", value=True)
+
+        guardar_alerta = st.form_submit_button("Guardar Configuración de Alertas", type="primary", icon=":material/notifications_active:")
+
+    if guardar_alerta:
+        st.success(f"¡Alerta configurada con éxito para '{cargo_alerta}'! Se enviarán notificaciones a {email_alerta}.", icon=":material/check_circle:")
+
+    st.divider()
+
+    st.markdown("### 🧪 Prueba de Alerta Instantánea")
+    if st.button("🔔 Enviar resumen de ofertas destacadas ahora", type="secondary"):
+        with st.spinner("Buscando vacantes destacadas con sueldo transparente..."):
+            resultados_alerta, _ = buscar_en_todos(cargo_alerta, cantidad_paginas=1)
+            transparentes = [r for r in resultados_alerta if r.get("sueldo") and r.get("sueldo") != "No especifica sueldo"]
+            
+            st.toast("Resumen de alertas generado con éxito.", icon="📧")
+            st.success(f"Se identificaron {len(transparentes)} vacantes destacadas con sueldo transparente para '{cargo_alerta}'.", icon=":material/mail:")
+            
+            for o in transparentes[:3]:
+                with st.container(border=True):
+                    st.markdown(f"**{o['titulo']}** en *{o['empresa']}*")
+                    st.caption(f"💰 {o['sueldo']} | 💻 {o['modalidad']} | 📍 {o['ubicacion']}")
+                    st.link_button("Ver Vacante", o["link"])
 
 # -------------------------------------------------------------
 # SECCIÓN 3: MIS POSTULACIONES

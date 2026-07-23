@@ -110,6 +110,7 @@ create table if not exists public.ofertas_guardadas (
     jornada text,
     publicado text,
     link text not null,
+    estado_kanban text default '📌 Guardada',
     creado_en timestamptz default now(),
     unique(user_id, link)
 );

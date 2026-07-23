@@ -98,6 +98,7 @@ def buscar_computrabajo(palabra_clave: str, cantidad_paginas: int = 1) -> list[d
             # link de empresa es el de arriba). No confundir con p.fs13,
             # que es el tiempo relativo de publicación ("Hace X minutos").
             elemento_ubicacion = tarjeta.select_one("p.fs16 span.mr10")
+            elemento_publicado = tarjeta.select_one("p.fs13.fc_aux")
             es_remoto = tarjeta.select_one("div.fs13 .i_home") is not None
 
             # Extraer sueldo o valores por defecto

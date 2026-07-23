@@ -161,6 +161,7 @@ def guardar_oferta_guardada(user_id: str, access_token: str, oferta: dict) -> No
         "jornada": oferta.get("jornada", ""),
         "publicado": oferta.get("publicado", ""),
         "link": oferta.get("link", ""),
+        "estado_kanban": oferta.get("estado_kanban", "📌 Guardada"),
     }
     cliente.table("ofertas_guardadas").upsert(fila, on_conflict="user_id,link").execute()
 
@@ -170,6 +171,12 @@ def obtener_ofertas_guardadas(user_id: str, access_token: str) -> list[dict]:
     cliente = cliente_para_usuario(access_token)
     resultado = cliente.table("ofertas_guardadas").select("*").eq("user_id", user_id).order("id", desc=True).execute()
     return resultado.data or []
+
+
+def actualizar_estado_kanban(user_id: str, access_token: str, link: str, nuevo_estado: str) -> None:
+    """Actualiza la columna estado_kanban en la tabla ofertas_guardadas."""
+    cliente = cliente_para_usuario(access_token)
+    cliente.table("ofertas_guardadas").update({"estado_kanban": nuevo_estado}).eq("user_id", user_id).eq("link", link).execute()
 
 
 def eliminar_oferta_guardada(user_id: str, access_token: str, link: str) -> None:
