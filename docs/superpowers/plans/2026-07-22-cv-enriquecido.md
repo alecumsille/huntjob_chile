@@ -1056,11 +1056,14 @@ git commit -m "refactor(cv): usa resumen+bullets de IA sobre secciones literales
 
 - [ ] **Step 1: Actualizar imports en `app.py`**
 
-Agregar `import copy` junto a los otros imports de la librería estándar en la línea 1 (`import base64`):
+Agregar `import copy` e `import uuid` junto a los otros imports de la librería estándar en la línea 1 (`import base64`):
 ```python
 import copy
+import uuid
 ```
-(Necesario para `copy.deepcopy(VALORES_POR_DEFECTO)` en el botón "Limpiar campos del perfil" — `VALORES_POR_DEFECTO` contiene listas mutables y una copia superficial las compartiría por referencia entre sesiones, el mismo riesgo que ya se corrigió en `core/perfil.py` y `core/db.py` durante la revisión de la Tarea 2.)
+`copy` es necesario para `copy.deepcopy(VALORES_POR_DEFECTO)` en el botón "Limpiar campos del perfil" — `VALORES_POR_DEFECTO` contiene listas mutables y una copia superficial las compartiría por referencia entre sesiones, el mismo riesgo que ya se corrigió en `core/perfil.py` y `core/db.py` durante la revisión de la Tarea 2.
+
+`uuid` es necesario para darle a cada entrada de las listas dinámicas (experiencia/formación/idiomas) una clave `_key` estable e independiente de su posición en la lista. Streamlit cachea el valor de un widget por su `key=` entre reruns y solo lo inicializa desde `value=` la primera vez que ve esa key — si la key se arma con el índice de la lista (`f"exp_cargo_{indice}"`), borrar cualquier entrada que no sea la última corre los índices de las siguientes y cada widget conserva su valor cacheado VIEJO en vez de adoptar el de la entrada que ahora ocupa esa posición, corrompiendo en silencio los datos de las entradas restantes. La key `_key` es un campo interno de UI (no forma parte de `VALORES_POR_DEFECTO`) y se filtra antes de guardar el perfil.
 
 Cambiar la línea 12:
 ```python
@@ -1087,11 +1090,11 @@ elif seccion == "Mi Perfil":
     perfil_actual = cargar_perfil(contexto_usuario)
 
     if "perfil_experiencia_editable" not in st.session_state:
-        st.session_state.perfil_experiencia_editable = [dict(t) for t in perfil_actual["experiencia_laboral"]]
+        st.session_state.perfil_experiencia_editable = [dict(t, _key=str(uuid.uuid4())) for t in perfil_actual["experiencia_laboral"]]
     if "perfil_formacion_editable" not in st.session_state:
-        st.session_state.perfil_formacion_editable = [dict(f) for f in perfil_actual["formacion_academica"]]
+        st.session_state.perfil_formacion_editable = [dict(f, _key=str(uuid.uuid4())) for f in perfil_actual["formacion_academica"]]
     if "perfil_idiomas_editable" not in st.session_state:
-        st.session_state.perfil_idiomas_editable = [dict(i) for i in perfil_actual["idiomas"]]
+        st.session_state.perfil_idiomas_editable = [dict(i, _key=str(uuid.uuid4())) for i in perfil_actual["idiomas"]]
 
     nombre = st.text_input("Nombre completo", value=perfil_actual["nombre"])
     with st.container(horizontal=True):
@@ -1111,76 +1114,79 @@ elif seccion == "Mi Perfil":
     st.divider()
     st.markdown("#### Experiencia laboral")
     for indice, trabajo in enumerate(st.session_state.perfil_experiencia_editable):
+        clave = trabajo["_key"]
         with st.container(border=True):
             col1, col2 = st.columns(2)
             with col1:
-                trabajo["cargo"] = st.text_input("Cargo", value=trabajo.get("cargo", ""), key=f"exp_cargo_{indice}")
+                trabajo["cargo"] = st.text_input("Cargo", value=trabajo.get("cargo", ""), key=f"exp_cargo_{clave}")
                 trabajo["fecha_inicio"] = st.text_input(
-                    "Fecha inicio (ej. Marzo 2021)", value=trabajo.get("fecha_inicio", ""), key=f"exp_fi_{indice}"
+                    "Fecha inicio (ej. Marzo 2021)", value=trabajo.get("fecha_inicio", ""), key=f"exp_fi_{clave}"
                 )
             with col2:
-                trabajo["empresa"] = st.text_input("Empresa", value=trabajo.get("empresa", ""), key=f"exp_empresa_{indice}")
+                trabajo["empresa"] = st.text_input("Empresa", value=trabajo.get("empresa", ""), key=f"exp_empresa_{clave}")
                 trabajo["actualidad"] = st.checkbox(
-                    "Trabajo actual", value=trabajo.get("actualidad", False), key=f"exp_act_{indice}"
+                    "Trabajo actual", value=trabajo.get("actualidad", False), key=f"exp_act_{clave}"
                 )
                 trabajo["fecha_fin"] = "" if trabajo["actualidad"] else st.text_input(
-                    "Fecha término (ej. Enero 2024)", value=trabajo.get("fecha_fin", ""), key=f"exp_ff_{indice}"
+                    "Fecha término (ej. Enero 2024)", value=trabajo.get("fecha_fin", ""), key=f"exp_ff_{clave}"
                 )
             trabajo["funciones"] = st.text_area(
                 "Funciones y responsabilidades (una por línea)",
                 value=trabajo.get("funciones", ""),
-                key=f"exp_func_{indice}",
+                key=f"exp_func_{clave}",
                 height=100,
             )
-            if st.button("🗑 Quitar esta experiencia", key=f"exp_quitar_{indice}"):
+            if st.button("🗑 Quitar esta experiencia", key=f"exp_quitar_{clave}"):
                 st.session_state.perfil_experiencia_editable.pop(indice)
                 st.rerun()
     if st.button("+ Agregar experiencia laboral", icon=":material/add:", key="exp_agregar"):
         st.session_state.perfil_experiencia_editable.append(
-            {"cargo": "", "empresa": "", "fecha_inicio": "", "fecha_fin": "", "actualidad": False, "funciones": ""}
+            {"cargo": "", "empresa": "", "fecha_inicio": "", "fecha_fin": "", "actualidad": False, "funciones": "", "_key": str(uuid.uuid4())}
         )
         st.rerun()
 
     st.divider()
     st.markdown("#### Formación académica")
     for indice, estudio in enumerate(st.session_state.perfil_formacion_editable):
+        clave = estudio["_key"]
         with st.container(border=True):
             col1, col2 = st.columns(2)
             with col1:
-                estudio["titulo"] = st.text_input("Título / carrera", value=estudio.get("titulo", ""), key=f"form_titulo_{indice}")
-                estudio["institucion"] = st.text_input("Institución", value=estudio.get("institucion", ""), key=f"form_inst_{indice}")
+                estudio["titulo"] = st.text_input("Título / carrera", value=estudio.get("titulo", ""), key=f"form_titulo_{clave}")
+                estudio["institucion"] = st.text_input("Institución", value=estudio.get("institucion", ""), key=f"form_inst_{clave}")
             with col2:
                 tipo_guardado = estudio.get("tipo", "Carrera")
                 indice_tipo = TIPOS_FORMACION.index(tipo_guardado) if tipo_guardado in TIPOS_FORMACION else 0
-                estudio["tipo"] = st.selectbox("Tipo", TIPOS_FORMACION, index=indice_tipo, key=f"form_tipo_{indice}")
-                estudio["fecha_inicio"] = st.text_input("Año inicio", value=estudio.get("fecha_inicio", ""), key=f"form_fi_{indice}")
-                estudio["fecha_fin"] = st.text_input("Año término", value=estudio.get("fecha_fin", ""), key=f"form_ff_{indice}")
-            if st.button("🗑 Quitar esta formación", key=f"form_quitar_{indice}"):
+                estudio["tipo"] = st.selectbox("Tipo", TIPOS_FORMACION, index=indice_tipo, key=f"form_tipo_{clave}")
+                estudio["fecha_inicio"] = st.text_input("Año inicio", value=estudio.get("fecha_inicio", ""), key=f"form_fi_{clave}")
+                estudio["fecha_fin"] = st.text_input("Año término", value=estudio.get("fecha_fin", ""), key=f"form_ff_{clave}")
+            if st.button("🗑 Quitar esta formación", key=f"form_quitar_{clave}"):
                 st.session_state.perfil_formacion_editable.pop(indice)
                 st.rerun()
     if st.button("+ Agregar formación académica", icon=":material/add:", key="form_agregar"):
         st.session_state.perfil_formacion_editable.append(
-            {"titulo": "", "institucion": "", "fecha_inicio": "", "fecha_fin": "", "tipo": "Carrera"}
+            {"titulo": "", "institucion": "", "fecha_inicio": "", "fecha_fin": "", "tipo": "Carrera", "_key": str(uuid.uuid4())}
         )
         st.rerun()
 
     st.divider()
     st.markdown("#### Idiomas")
     for indice, idioma in enumerate(st.session_state.perfil_idiomas_editable):
+        clave = idioma["_key"]
         with st.container(border=True):
             col1, col2, col3 = st.columns([2, 2, 1])
             with col1:
-                idioma["idioma"] = st.text_input("Idioma", value=idioma.get("idioma", ""), key=f"idi_nombre_{indice}")
+                idioma["idioma"] = st.text_input("Idioma", value=idioma.get("idioma", ""), key=f"idi_nombre_{clave}")
             with col2:
                 nivel_guardado = idioma.get("nivel", "Intermedio")
                 indice_nivel = NIVELES_IDIOMA.index(nivel_guardado) if nivel_guardado in NIVELES_IDIOMA else 1
-                idioma["nivel"] = st.selectbox("Nivel", NIVELES_IDIOMA, index=indice_nivel, key=f"idi_nivel_{indice}")
+                idioma["nivel"] = st.selectbox("Nivel", NIVELES_IDIOMA, index=indice_nivel, key=f"idi_nivel_{clave}")
             with col3:
-                if st.button("🗑", key=f"idi_quitar_{indice}"):
+                if st.button("🗑", key=f"idi_quitar_{clave}"):
                     st.session_state.perfil_idiomas_editable.pop(indice)
                     st.rerun()
     if st.button("+ Agregar idioma", icon=":material/add:", key="idi_agregar"):
-        st.session_state.perfil_idiomas_editable.append({"idioma": "", "nivel": "Intermedio"})
+        st.session_state.perfil_idiomas_editable.append({"idioma": "", "nivel": "Intermedio", "_key": str(uuid.uuid4())})
         st.rerun()
 
     st.divider()
@@ -1208,9 +1214,9 @@ elif seccion == "Mi Perfil":
                 "seniority": seniority,
                 "competencias_tecnicas": competencias_tecnicas,
                 "habilidades_blandas": habilidades_blandas,
-                "experiencia_laboral": st.session_state.perfil_experiencia_editable,
-                "formacion_academica": st.session_state.perfil_formacion_editable,
-                "idiomas": st.session_state.perfil_idiomas_editable,
+                "experiencia_laboral": [{k: v for k, v in t.items() if k != "_key"} for t in st.session_state.perfil_experiencia_editable],
+                "formacion_academica": [{k: v for k, v in f.items() if k != "_key"} for f in st.session_state.perfil_formacion_editable],
+                "idiomas": [{k: v for k, v in i.items() if k != "_key"} for i in st.session_state.perfil_idiomas_editable],
                 "stack_principal": "",
                 "logros_y_experiencia": "",
             })
