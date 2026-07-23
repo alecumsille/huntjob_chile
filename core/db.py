@@ -146,3 +146,33 @@ def verificar_y_consumir_uso(user_id: str, access_token: str) -> tuple[bool, str
     restantes = plan["limite_mensual"] - (usados + 1)
     aviso = f"Te quedan {restantes} generaciones gratis este mes." if restantes <= 2 else ""
     return True, aviso
+
+
+def guardar_oferta_guardada(user_id: str, access_token: str, oferta: dict) -> None:
+    """Guarda o actualiza una oferta laboral favorita en la cuenta del usuario."""
+    cliente = cliente_para_usuario(access_token)
+    fila = {
+        "user_id": user_id,
+        "titulo": oferta.get("titulo", ""),
+        "empresa": oferta.get("empresa", ""),
+        "ubicacion": oferta.get("ubicacion", ""),
+        "modalidad": oferta.get("modalidad", ""),
+        "sueldo": oferta.get("sueldo", ""),
+        "jornada": oferta.get("jornada", ""),
+        "publicado": oferta.get("publicado", ""),
+        "link": oferta.get("link", ""),
+    }
+    cliente.table("ofertas_guardadas").upsert(fila, on_conflict="user_id,link").execute()
+
+
+def obtener_ofertas_guardadas(user_id: str, access_token: str) -> list[dict]:
+    """Obtiene todas las ofertas guardadas de un usuario."""
+    cliente = cliente_para_usuario(access_token)
+    resultado = cliente.table("ofertas_guardadas").select("*").eq("user_id", user_id).order("id", desc=True).execute()
+    return resultado.data or []
+
+
+def eliminar_oferta_guardada(user_id: str, access_token: str, link: str) -> None:
+    """Elimina una oferta guardada del banco personal del usuario."""
+    cliente = cliente_para_usuario(access_token)
+    cliente.table("ofertas_guardadas").delete().eq("user_id", user_id).eq("link", link).execute()

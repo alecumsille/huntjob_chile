@@ -97,5 +97,24 @@ alter table public.perfiles add column if not exists ciudad text default '';
 alter table public.perfiles add column if not exists experiencia_laboral jsonb default '[]';
 alter table public.perfiles add column if not exists formacion_academica jsonb default '[]';
 alter table public.perfiles add column if not exists idiomas jsonb default '[]';
-alter table public.perfiles add column if not exists habilidades_blandas text default '';
 alter table public.perfiles add column if not exists competencias_tecnicas text default '';
+
+create table if not exists public.ofertas_guardadas (
+    id bigint generated always as identity primary key,
+    user_id uuid not null references auth.users(id) on delete cascade,
+    titulo text,
+    empresa text,
+    ubicacion text,
+    modalidad text,
+    sueldo text,
+    jornada text,
+    publicado text,
+    link text not null,
+    creado_en timestamptz default now(),
+    unique(user_id, link)
+);
+
+alter table public.ofertas_guardadas enable row level security;
+drop policy if exists "ofertas_guardadas_propio" on public.ofertas_guardadas;
+create policy "ofertas_guardadas_propio" on public.ofertas_guardadas
+    for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

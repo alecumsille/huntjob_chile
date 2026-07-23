@@ -69,8 +69,28 @@ def test_generar_pdf_cv_produce_bytes_no_vacios():
     assert len(pdf_bytes) > 0
 
 
+def test_formatear_para_reportlab_preserva_bolds():
+    from core.generador_pdf import formatear_para_reportlab
+    resultado = formatear_para_reportlab("Desarrollo en <b>Python</b> & **PostgreSQL** <scripts>")
+    assert "<b>Python</b>" in resultado
+    assert "<b>PostgreSQL</b>" in resultado
+    assert "&amp;" in resultado
+    assert "&lt;scripts&gt;" in resultado
+
+
+def test_construir_secciones_incluye_resumen_fit():
+    perfil = _perfil_base()
+    resumen_fit = [{"requisito": "Python 3.10+", "postulante": "5 años exp", "estado": "Cumplido"}]
+    secciones = construir_secciones_cv(perfil, "Resumen de prueba.", [], resumen_fit=resumen_fit)
+    titulos = [s["titulo"] for s in secciones]
+    assert "Resumen de Ajuste y Requisitos Clave" in titulos
+    seccion_fit = next(s for s in secciones if s["titulo"] == "Resumen de Ajuste y Requisitos Clave")
+    assert "<b>Requisito Clave:</b> Python 3.10+" in seccion_fit["contenido"][0]
+
+
 def test_generar_pdf_cv_falla_sin_ninguna_seccion():
     perfil = _perfil_base()
     import pytest
     with pytest.raises(ValueError):
         generar_pdf_cv(perfil, "", [], "Backend Developer")
+

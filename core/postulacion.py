@@ -14,6 +14,7 @@ sobre los hechos reales que ya están en el perfil.
 
 from core.motor_ia import generar_texto, pulir_experiencia_laboral, ErrorIA
 from core.generador_pdf import generar_pdf, generar_pdf_cv, sanear_nombre_archivo, construir_secciones_cv
+from core.generador_docx import generar_docx_cv
 from core.perfil import formatear_perfil
 
 
@@ -55,7 +56,9 @@ def generar_documentos(
         f"potente de 3 a 5 líneas, optimizado para pasar filtros ATS, para el puesto de {puesto_objetivo} "
         f"en {mercado_destino}. Usa exclusivamente la experiencia, formación y competencias reales del "
         f"candidato descritas en su perfil. NUNCA inventes tecnologías, empresas o estudios que no estén "
-        f"en el perfil. No agregues título de sección ni explicaciones — responde solo el texto del extracto."
+        f"en el perfil. CRÍTICO: Identifica los requisitos y palabras clave principales de la oferta que "
+        f"el candidato cumpla y ENVUÉLVELOS EN ETIQUETAS <b> y </b> (ej: <b>Python</b>, <b>Liderazgo</b>) "
+        f"para destacarlos en negrita. No agregues título de sección ni explicaciones — responde solo el texto del extracto."
         f"{instruccion_brechas}\n\nPerfil del candidato:\n{contexto_perfil}"
     )
     resumen_profesional = generar_texto(prompt_resumen, texto_oferta)
@@ -80,15 +83,32 @@ def generar_documentos(
     cargo_limpio = sanear_nombre_archivo(puesto_objetivo)
     nombre_archivo = sanear_nombre_archivo(perfil.get("nombre") or "candidato")
 
-    cv_bytes = generar_pdf_cv(perfil, resumen_profesional, bullets_por_trabajo, puesto_objetivo, estilo_nombre=estilo_pdf)
+    resumen_fit = match.get("resumen_fit") if match else None
+    cv_bytes = generar_pdf_cv(
+        perfil,
+        resumen_profesional,
+        bullets_por_trabajo,
+        puesto_objetivo,
+        estilo_nombre=estilo_pdf,
+        resumen_fit=resumen_fit,
+    )
+    cv_docx_bytes = generar_docx_cv(
+        perfil,
+        resumen_profesional,
+        bullets_por_trabajo,
+        puesto_objetivo,
+        resumen_fit=resumen_fit,
+    )
     cl_bytes = generar_pdf(cover_letter_texto, "Cover Letter", puesto_objetivo, perfil, estilo_nombre=estilo_pdf)
 
     cv_texto = _aplanar_cv_a_texto(perfil, resumen_profesional, bullets_por_trabajo, puesto_objetivo)
 
     return {
         "cv_bytes": cv_bytes,
+        "cv_docx_bytes": cv_docx_bytes,
         "cl_bytes": cl_bytes,
         "nombre_cv": f"CV_{nombre_archivo}_{cargo_limpio}.pdf",
+        "nombre_cv_docx": f"CV_{nombre_archivo}_{cargo_limpio}.docx",
         "nombre_cl": f"CoverLetter_{nombre_archivo}_{cargo_limpio}.pdf",
         "cv_texto": cv_texto,
         "cover_letter_texto": cover_letter_texto,

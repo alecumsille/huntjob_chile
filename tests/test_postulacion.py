@@ -25,8 +25,9 @@ def test_generar_documentos_devuelve_mismas_llaves_que_antes():
     with patch("core.postulacion.generar_texto", return_value="Resumen generado."), \
          patch("core.postulacion.pulir_experiencia_laboral", return_value=[["Bullet pulido"]]):
         resultado = generar_documentos("texto oferta", "Backend Developer", "Chile", "Pastel", _perfil_prueba())
-    assert set(resultado.keys()) == {"cv_bytes", "cl_bytes", "nombre_cv", "nombre_cl", "cv_texto", "cover_letter_texto"}
+    assert set(resultado.keys()) == {"cv_bytes", "cv_docx_bytes", "cl_bytes", "nombre_cv", "nombre_cv_docx", "nombre_cl", "cv_texto", "cover_letter_texto"}
     assert isinstance(resultado["cv_bytes"], bytes) and len(resultado["cv_bytes"]) > 0
+    assert isinstance(resultado["cv_docx_bytes"], bytes) and len(resultado["cv_docx_bytes"]) > 0
     assert isinstance(resultado["cl_bytes"], bytes) and len(resultado["cl_bytes"]) > 0
 
 

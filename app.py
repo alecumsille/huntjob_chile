@@ -9,12 +9,21 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from core.scraper_web import extraer_texto_url, ErrorScraping
-from core.motor_ia import extraer_cargo_y_empresa, analizar_match, sugerir_respuesta, ErrorIA
+from core.motor_ia import extraer_cargo_y_empresa, analizar_match, sugerir_respuesta, generar_preguntas_entrevista, ErrorIA
 from core.portales import PORTALES, buscar_en_todos
 from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY, NIVELES_IDIOMA, TIPOS_FORMACION, VALORES_POR_DEFECTO
 from core.postulacion import generar_documentos
 from core.auth_supabase import obtener_usuario_desde_token, cerrar_sesion, SUPABASE_URL
-from core.db import guardar_historial, obtener_historial_reciente, marcar_postulado, verificar_y_consumir_uso, obtener_plan
+from core.db import (
+    guardar_historial,
+    obtener_historial_reciente,
+    marcar_postulado,
+    verificar_y_consumir_uso,
+    obtener_plan,
+    guardar_oferta_guardada,
+    obtener_ofertas_guardadas,
+    eliminar_oferta_guardada,
+)
 from core.flow_checkout import PAYMENTS_SERVICE_URL
 
 logger = logging.getLogger(__name__)
@@ -484,7 +493,7 @@ with st.sidebar:
     st.divider()
     seccion = st.radio(
         "Panel",
-        ["Generador por URL", "Buscador de Vacantes", "Mis Postulaciones", "Mi Perfil", "Preguntas de Postulación", "FAQ"],
+        ["Generador por URL", "Buscador de Vacantes", "Mis Ofertas Guardadas", "Mis Postulaciones", "Mi Perfil", "Preguntas de Postulación", "FAQ"],
     )
     st.caption("HuntJob Chile")
 
@@ -569,14 +578,29 @@ if seccion == "Generador por URL":
                 if aviso_uso:
                     st.info(aviso_uso, icon=":material/info:")
 
-            with st.spinner("Redactando documentos con Gemini..."):
+            with st.spinner("Analizando encaje ATS y redactando documentos a la medida con IA..."):
                 try:
+                    match_url = analizar_match(st.session_state.texto_extraido, perfil)
                     documentos = generar_documentos(
-                        st.session_state.texto_extraido, puesto_objetivo, mercado_destino, estilo_pdf, perfil
+                        st.session_state.texto_extraido, puesto_objetivo, mercado_destino, estilo_pdf, perfil, match=match_url
                     )
                 except (ErrorIA, ValueError) as e:
                     st.error(f"Error al generar el contenido: {e}", icon=":material/error:")
                     st.stop()
+
+            if match_url:
+                color_score = "green" if match_url["score"] >= 70 else "yellow" if match_url["score"] >= 40 else "red"
+                st.badge(f"Match ATS: {match_url['score']}/100", icon=":material/insights:", color=color_score)
+                st.caption(match_url["explicacion"])
+
+                if match_url.get("resumen_fit"):
+                    with st.expander("Ver Resumen Ejecutivo: Postulante vs. Requisitos Clave"):
+                        for item in match_url["resumen_fit"]:
+                            req = item.get("requisito", "")
+                            post = item.get("postulante", "")
+                            est = item.get("estado", "Cumplido")
+                            badge = "🟢 Cumplido" if est == "Cumplido" else ("🟡 Parcial" if est == "Parcial" else "🔴 No detectado")
+                            st.markdown(f"- **Requisito:** {req}  \n  └ **Perfil:** {post} *({badge})*")
 
             if contexto_usuario:
                 guardar_historial(
@@ -626,12 +650,17 @@ elif seccion == "Buscador de Vacantes":
         st.session_state.errores_busqueda = []
     if "matches" not in st.session_state:
         st.session_state.matches = {}
+    if "preguntas_entrevista" not in st.session_state:
+        st.session_state.preguntas_entrevista = {}
+
+    if "ofertas_guardadas_locales" not in st.session_state:
+        st.session_state.ofertas_guardadas_locales = {}
 
     columna_filtros, columna_resultados = st.columns([1, 3])
 
     with columna_filtros:
         with st.container(border=True):
-            palabra_clave = st.text_input("Palabra clave", value="Python")
+            palabra_clave = st.text_input("Palabra clave / Cargo objetivo", value="Python")
             cantidad_paginas = st.slider("Páginas a recorrer", min_value=1, max_value=5, value=1)
             portales_elegidos = st.pills(
                 "Portales",
@@ -639,6 +668,7 @@ elif seccion == "Buscador de Vacantes":
                 selection_mode="multi",
                 default=nombres_portales,
             )
+            solo_sueldo_transparente = st.toggle("🟢 Solo ofertas con sueldo transparente", value=False)
             portales_marcados = [id_por_nombre[nombre] for nombre in portales_elegidos]
             buscar = st.button("Buscar ofertas", icon=":material/search:", type="primary")
 
@@ -667,16 +697,54 @@ elif seccion == "Buscador de Vacantes":
             if "postulaciones_1click" not in st.session_state:
                 st.session_state.postulaciones_1click = {}
 
+            # Obtener lista de links guardados previamente
+            links_guardados = []
+            if contexto_usuario:
+                try:
+                    guardadas_db = obtener_ofertas_guardadas(contexto_usuario["user_id"], contexto_usuario["access_token"])
+                    links_guardados = [o.get("link") for o in guardadas_db if o.get("link")]
+                except Exception:
+                    links_guardados = list(st.session_state.ofertas_guardadas_locales.keys())
+            else:
+                links_guardados = list(st.session_state.ofertas_guardadas_locales.keys())
+
             for indice, oferta in enumerate(st.session_state.resultados_busqueda):
+                sueldo_val = oferta.get("sueldo", "No especifica sueldo")
+                tiene_sueldo = sueldo_val != "No especifica sueldo"
+                if solo_sueldo_transparente and not tiene_sueldo:
+                    continue
+
                 with st.container(border=True):
-                    st.markdown(f"#### {oferta['titulo']}")
-                    st.caption(f"{oferta['empresa']} — {oferta['ubicacion']}")
+                    col_t1, col_t2 = st.columns([4, 1])
+                    with col_t1:
+                        st.markdown(f"#### {oferta['titulo']}")
+                    with col_t2:
+                        link_oferta = oferta.get("link", "")
+                        es_guardada = link_oferta in links_guardados
+                        if st.button("⭐ Guardada" if es_guardada else "☆ Guardar", key=f"btn_guardar_{indice}", disabled=es_guardada):
+                            if contexto_usuario:
+                                try:
+                                    guardar_oferta_guardada(contexto_usuario["user_id"], contexto_usuario["access_token"], oferta)
+                                except Exception as e:
+                                    st.session_state.ofertas_guardadas_locales[link_oferta] = oferta
+                            else:
+                                st.session_state.ofertas_guardadas_locales[link_oferta] = oferta
+                            st.toast("Oferta guardada en tu banco personal de ofertas.", icon="⭐")
+                            st.rerun()
+
+                    # Ficha Resumen Badges Enriquecidas
                     with st.container(horizontal=True, vertical_alignment="center"):
                         st.badge(oferta["fuente"], icon=":material/travel_explore:", color="gray")
-                        if oferta.get("modalidad"):
-                            st.badge(oferta["modalidad"], icon=":material/home_work:", color="blue")
-                        if oferta.get("publicado"):
-                            st.caption(oferta["publicado"])
+                        st.badge(f"🏢 {oferta.get('empresa', 'No especifica empresa')}", color="gray")
+                        st.badge(f"📍 {oferta.get('ubicacion', 'No especifica ubicación')}", color="gray")
+                        st.badge(f"💻 {oferta.get('modalidad', 'No especifica modalidad')}", color="blue")
+                        if tiene_sueldo:
+                            st.badge(f"💰 {sueldo_val}", color="green")
+                            st.badge("🟢 Sueldo Transparente", color="green")
+                        else:
+                            st.badge("💰 No especifica sueldo", color="gray")
+                        st.badge(f"⏰ {oferta.get('jornada', 'No especifica horario')}", color="gray")
+                        st.caption(f"📅 {oferta.get('publicado', 'Reciente')}")
 
                     match = st.session_state.matches.get(oferta["link"])
                     if match:
@@ -685,7 +753,35 @@ elif seccion == "Buscador de Vacantes":
                         st.caption(match["explicacion"])
 
                         with st.expander("Ver Auditoría de Compatibilidad ATS Detallada"):
-                            st.progress(match["score"] / 100, text=f"Puntaje de Coincidencia: {match['score']}%")
+                            st.progress(match["score"] / 100, text=f"Puntaje de Coincidencia Global: {match['score']}%")
+
+                            if match.get("desglose_score"):
+                                st.markdown("#### 📈 Desglose Dimensional del Puntaje ATS")
+                                d = match["desglose_score"]
+                                col_d1, col_d2 = st.columns(2)
+                                with col_d1:
+                                    st.caption(f"**Hard Skills & Stack:** {d.get('hardskills', 0)}%")
+                                    st.progress(d.get('hardskills', 0) / 100)
+                                    st.caption(f"**Seniority & Experiencia:** {d.get('experiencia', 0)}%")
+                                    st.progress(d.get('experiencia', 0) / 100)
+                                with col_d2:
+                                    st.caption(f"**Formación & Certificaciones:** {d.get('formacion', 0)}%")
+                                    st.progress(d.get('formacion', 0) / 100)
+                                    st.caption(f"**Soft Skills & Fit Cultural:** {d.get('softskills', 0)}%")
+                                    st.progress(d.get('softskills', 0) / 100)
+
+                            if match.get("requisitos_destacados"):
+                                reqs_bold = ", ".join([f"**{r}**" for r in match["requisitos_destacados"]])
+                                st.markdown(f"🎯 **Requisitos Clave Detectados (Destacados en tu CV):** {reqs_bold}")
+
+                            if match.get("resumen_fit"):
+                                st.markdown("#### 📊 Resumen Ejecutivo: Postulante vs. Requisitos")
+                                for item in match["resumen_fit"]:
+                                    req = item.get("requisito", "")
+                                    post = item.get("postulante", "")
+                                    est = item.get("estado", "Cumplido")
+                                    badge = "🟢 Cumplido" if est == "Cumplido" else ("🟡 Parcial" if est == "Parcial" else "🔴 No detectado")
+                                    st.markdown(f"- **Requisito:** {req}  \n  └ **Perfil:** {post} *({badge})*")
 
                             col1, col2 = st.columns(2)
                             with col1:
@@ -784,30 +880,127 @@ elif seccion == "Buscador de Vacantes":
                         st.success("CV y Cover Letter listos, orientados a esta oferta.", icon=":material/check_circle:")
                         with st.container(horizontal=True):
                             st.download_button(
-                                "Descargar CV",
+                                "Descargar CV (PDF)",
                                 data=resultado_1click["cv_bytes"],
                                 file_name=resultado_1click["nombre_cv"],
                                 mime="application/pdf",
-                                icon=":material/download:",
+                                icon=":material/picture_as_pdf:",
                                 key=f"dl_cv_{indice}",
                             )
+                            if "cv_docx_bytes" in resultado_1click:
+                                st.download_button(
+                                    "Descargar CV (Word .docx)",
+                                    data=resultado_1click["cv_docx_bytes"],
+                                    file_name=resultado_1click.get("nombre_cv_docx", "CV.docx"),
+                                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                    icon=":material/description:",
+                                    key=f"dl_cv_docx_{indice}",
+                                )
                             st.download_button(
-                                "Descargar Cover Letter",
+                                "Descargar Cover Letter (PDF)",
                                 data=resultado_1click["cl_bytes"],
                                 file_name=resultado_1click["nombre_cl"],
                                 mime="application/pdf",
-                                icon=":material/download:",
+                                icon=":material/mail:",
                                 key=f"dl_cl_{indice}",
                             )
                             st.link_button(
                                 "Postular ahora en el portal", oferta["link"],
                                 icon=":material/open_in_new:", key=f"ir_postular_{indice}",
                             )
+
+                        if st.button("Simular Entrevista de Trabajo (5 Preguntas Clave)", icon=":material/quiz:", key=f"simular_entrevista_{indice}"):
+                            with st.spinner("Generando preguntas de entrevista y respuestas modelo..."):
+                                try:
+                                    texto_oferta = extraer_texto_url(oferta["link"])
+                                    st.session_state.preguntas_entrevista[oferta["link"]] = generar_preguntas_entrevista(
+                                        texto_oferta, perfil_para_match
+                                    )
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Error generando simulador: {e}", icon=":material/error:")
+
+                        preguntas_sim = st.session_state.preguntas_entrevista.get(oferta["link"])
+                        if preguntas_sim:
+                            with st.expander("🎙️ Simulador de Entrevista: 5 Preguntas Clave & Respuestas Modelo", expanded=True):
+                                for idx, item in enumerate(preguntas_sim, start=1):
+                                    st.markdown(f"**P{idx} [{item.get('tipo', 'Pregunta')}]:** {item.get('pregunta', '')}")
+                                    st.caption(f"💡 *Consejo:* {item.get('consejo', '')}")
+                                    st.info(f"**Respuesta modelo recomendada:**\n{item.get('respuesta_modelo', '')}")
+
                         st.caption(
-                            "Descarga los documentos y termina la postulación en el portal — no enviamos "
-                            "formularios automáticamente por ti, ya que eso requeriría tu sesión logueada "
-                            "en cada sitio y podría infringir sus términos de uso."
+                            "Descarga los documentos en PDF o Word (.docx) y termina la postulación en el portal."
                         )
+
+# -------------------------------------------------------------
+# SECCIÓN: MIS OFERTAS GUARDADAS
+# -------------------------------------------------------------
+elif seccion == "Mis Ofertas Guardadas":
+    st.subheader("⭐ Banco Personal de Ofertas Guardadas")
+    st.caption("Organiza y haz seguimiento a las vacantes de tu interés antes de postular.")
+
+    ofertas_guardadas = []
+    if contexto_usuario:
+        try:
+            ofertas_guardadas = obtener_ofertas_guardadas(contexto_usuario["user_id"], contexto_usuario["access_token"])
+        except Exception:
+            ofertas_guardadas = list(st.session_state.get("ofertas_guardadas_locales", {}).values())
+    else:
+        ofertas_guardadas = list(st.session_state.get("ofertas_guardadas_locales", {}).values())
+
+    if not ofertas_guardadas:
+        st.info("Aún no has guardado ninguna oferta. Busca vacantes en el 'Buscador de Vacantes' y presiona el botón ☆ Guardar.", icon=":material/info:")
+    else:
+        st.success(f"Tienes {len(ofertas_guardadas)} oferta(s) guardada(s) en tu banco personal.", icon=":material/bookmarks:")
+
+        import pandas as pd
+        df_export = pd.DataFrame(ofertas_guardadas)
+        csv_bytes = df_export.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "📊 Exportar ofertas guardadas a Excel / CSV",
+            data=csv_bytes,
+            file_name="mis_ofertas_guardadas.csv",
+            mime="text/csv",
+            icon=":material/download:",
+        )
+
+        st.divider()
+
+        for idx, oferta in enumerate(ofertas_guardadas):
+            with st.container(border=True):
+                col_og1, col_og2 = st.columns([4, 1])
+                with col_og1:
+                    st.markdown(f"#### {oferta.get('titulo', 'Sin título')}")
+                with col_og2:
+                    if st.button("🗑️ Eliminar", key=f"del_og_{idx}"):
+                        link_del = oferta.get("link", "")
+                        if contexto_usuario:
+                            try:
+                                eliminar_oferta_guardada(contexto_usuario["user_id"], contexto_usuario["access_token"], link_del)
+                            except Exception:
+                                pass
+                        if link_del in st.session_state.get("ofertas_guardadas_locales", {}):
+                            del st.session_state.ofertas_guardadas_locales[link_del]
+                        st.toast("Oferta eliminada de tus guardadas.", icon="🗑️")
+                        st.rerun()
+
+                # Badges Ficha Resumen
+                with st.container(horizontal=True, vertical_alignment="center"):
+                    st.badge(oferta.get("fuente", "Portal"), icon=":material/travel_explore:", color="gray")
+                    st.badge(f"🏢 {oferta.get('empresa', 'No especifica empresa')}", color="gray")
+                    st.badge(f"📍 {oferta.get('ubicacion', 'No especifica ubicación')}", color="gray")
+                    st.badge(f"💻 {oferta.get('modalidad', 'No especifica modalidad')}", color="blue")
+                    sueldo_g = oferta.get('sueldo', 'No especifica sueldo')
+                    if sueldo_g != "No especifica sueldo":
+                        st.badge(f"💰 {sueldo_g}", color="green")
+                        st.badge("🟢 Sueldo Transparente", color="green")
+                    else:
+                        st.badge("💰 No especifica sueldo", color="gray")
+                    st.badge(f"⏰ {oferta.get('jornada', 'No especifica horario')}", color="gray")
+                    st.caption(f"📅 {oferta.get('publicado', 'Reciente')}")
+
+                if oferta.get("link"):
+                    st.link_button("Ver oferta original en el portal", oferta["link"], icon=":material/open_in_new:", key=f"link_og_{idx}")
 
 # -------------------------------------------------------------
 # SECCIÓN 3: MIS POSTULACIONES

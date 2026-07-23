@@ -40,17 +40,33 @@ def sanear_nombre_archivo(texto: str) -> str:
     return limpio if limpio else "documento_sin_titulo"
 
 
+def formatear_para_reportlab(linea: str) -> str:
+    """
+    Sanea el texto para ReportLab preservando marcas de negrita (<b>...</b> o **...**).
+    Escapa la sintaxis XML (&, <, >) pero restituye únicamente las etiquetas <b> y </b>
+    para que ReportLab renderice el texto con negritas en el PDF.
+    """
+    if not linea:
+        return ""
+    limpia = linea.strip()
+    limpia = re.sub(r"^#{1,6}\s*", "", limpia)
+    limpia = re.sub(r"^[*-]\s+", "", limpia)
+    limpia = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", limpia)
+
+    limpia = limpia.replace("<b>", "___BOLD_START___").replace("</b>", "___BOLD_END___")
+    limpia = limpia.replace("<strong>", "___BOLD_START___").replace("</strong>", "___BOLD_END___")
+
+    limpia = escape(limpia)
+
+    limpia = limpia.replace("___BOLD_START___", "<b>").replace("___BOLD_END___", "</b>")
+    return limpia
+
+
 def _limpiar_markdown(linea: str) -> str:
     """
-    Gemini suele responder con sintaxis Markdown (headers, negritas,
-    separadores). El PDF no renderiza Markdown, así que sin esto los
-    símbolos ("**", "###", "***") quedan literales en el documento final.
+    Conserva compatibilidad retroactiva. Usa formatear_para_reportlab.
     """
-    limpia = linea.strip()
-    limpia = re.sub(r"^#{1,6}\s*", "", limpia)  # headers (#, ##, ###...)
-    limpia = re.sub(r"^[*-]\s+", "- ", limpia)  # bullets ("* x" o "- x")
-    limpia = re.sub(r"\*\*\*|\*\*|(?<!\w)\*(?!\s)", "", limpia)  # negrita/cursiva
-    return limpia
+    return formatear_para_reportlab(linea)
 
 
 def _formatear_rango_fechas(fecha_inicio: str, fecha_fin: str, actualidad: bool) -> str:
@@ -62,23 +78,37 @@ def _formatear_rango_fechas(fecha_inicio: str, fecha_fin: str, actualidad: bool)
     return fecha_inicio or fecha_fin or ""
 
 
-def construir_secciones_cv(perfil: dict, resumen_profesional: str, bullets_por_trabajo: list[list[str]]) -> list[dict]:
+def construir_secciones_cv(
+    perfil: dict,
+    resumen_profesional: str,
+    bullets_por_trabajo: list[list[str]],
+    resumen_fit: list[dict] | None = None,
+) -> list[dict]:
     """
-    Arma las secciones del CV como datos puros (sin reportlab de por
-    medio), en el orden estándar chileno: Perfil Profesional,
-    Experiencia Laboral, Formación Académica, Competencias Técnicas,
-    Habilidades Blandas, Idiomas. Formación, competencias, habilidades
-    e idiomas se arman 100% literales desde el perfil — nunca pasan
-    por bullets_por_trabajo ni por ningún texto generado por IA. Una
-    sección se omite por completo si no tiene contenido (ej. Idiomas
-    si la lista está vacía). La usan tanto generar_pdf_cv() como el
-    aplanador de texto plano en core/postulacion.py, para no duplicar
-    esta lógica en dos lugares.
+    Arma las secciones del CV como datos puros en el esqueleto ATS estándar:
+    1. Perfil Profesional
+    2. Resumen de Ajuste y Requisitos Clave (si está disponible)
+    3. Experiencia Laboral
+    4. Formación Académica
+    5. Competencias Técnicas
+    6. Habilidades Blandas
+    7. Idiomas
     """
     secciones = []
 
     if resumen_profesional and resumen_profesional.strip():
         secciones.append({"titulo": "Perfil Profesional", "tipo": "parrafo", "contenido": resumen_profesional.strip()})
+
+    if resumen_fit:
+        lineas_fit = []
+        for item in resumen_fit:
+            req = item.get("requisito", "").strip()
+            cand = item.get("postulante", "").strip()
+            est = item.get("estado", "Cumplido").strip()
+            if req:
+                lineas_fit.append(f"<b>Requisito Clave:</b> {req} | <b>Perfil:</b> {cand} ({est})")
+        if lineas_fit:
+            secciones.append({"titulo": "Resumen de Ajuste y Requisitos Clave", "tipo": "lista", "contenido": lineas_fit})
 
     experiencia = perfil.get("experiencia_laboral") or []
     if experiencia:
@@ -132,16 +162,13 @@ def generar_pdf_cv(
     bullets_por_trabajo: list[list[str]],
     puesto: str,
     estilo_nombre: str = "Pastel",
+    resumen_fit: list[dict] | None = None,
 ) -> bytes:
     """
     Compila el CV en PDF a partir de las secciones de construir_secciones_cv().
-    A diferencia de generar_pdf() (usado para la Cover Letter, un solo
-    bloque de texto libre), acá cada sección tiene su propio layout
-    según su tipo: párrafo, lista de trabajos con bullets, lista de
-    estudios, o lista simple. Lanza ValueError si no hay ninguna
-    sección con contenido, en vez de generar un PDF en blanco.
+    Soporta formato de negritas <b>...</b> de ReportLab para destacar requisitos clave.
     """
-    secciones = construir_secciones_cv(perfil, resumen_profesional, bullets_por_trabajo)
+    secciones = construir_secciones_cv(perfil, resumen_profesional, bullets_por_trabajo, resumen_fit=resumen_fit)
     if not secciones:
         raise ValueError("No se puede generar el CV: no hay ninguna sección con contenido.")
 
@@ -194,15 +221,15 @@ def generar_pdf_cv(
         elementos.append(Paragraph(escape(seccion["titulo"]), estilo_subtitulo))
         if seccion["tipo"] == "parrafo":
             for linea in seccion["contenido"].split("\n"):
-                linea_limpia = _limpiar_markdown(linea)
-                if linea_limpia:
-                    elementos.append(Paragraph(escape(linea_limpia), estilo_cuerpo))
+                linea_fmt = formatear_para_reportlab(linea)
+                if linea_fmt:
+                    elementos.append(Paragraph(linea_fmt, estilo_cuerpo))
         elif seccion["tipo"] == "trabajos":
             for trabajo in seccion["contenido"]:
                 if trabajo["encabezado"]:
                     elementos.append(Paragraph(escape(trabajo["encabezado"]), estilo_encabezado_trabajo))
                 for bullet in trabajo["bullets"]:
-                    elementos.append(Paragraph(escape(f"• {_limpiar_markdown(bullet)}"), estilo_bullet))
+                    elementos.append(Paragraph(f"• {formatear_para_reportlab(bullet)}", estilo_bullet))
         elif seccion["tipo"] == "estudios":
             for estudio in seccion["contenido"]:
                 if estudio["encabezado"]:
@@ -212,7 +239,7 @@ def generar_pdf_cv(
                     elementos.append(Paragraph(escape(texto), estilo_encabezado_trabajo))
         elif seccion["tipo"] == "lista":
             for item in seccion["contenido"]:
-                elementos.append(Paragraph(escape(f"• {item}"), estilo_bullet))
+                elementos.append(Paragraph(f"• {formatear_para_reportlab(item)}", estilo_bullet))
 
     documento.build(elementos)
     return buffer.getvalue()

@@ -98,24 +98,36 @@ def buscar_computrabajo(palabra_clave: str, cantidad_paginas: int = 1) -> list[d
             # link de empresa es el de arriba). No confundir con p.fs13,
             # que es el tiempo relativo de publicación ("Hace X minutos").
             elemento_ubicacion = tarjeta.select_one("p.fs16 span.mr10")
-            elemento_publicado = tarjeta.select_one("p.fs13.fc_aux")
             es_remoto = tarjeta.select_one("div.fs13 .i_home") is not None
 
-            if elemento_titulo is None:
-                # Tarjeta con estructura inesperada: se salta, pero no rompe todo el batch.
-                continue
+            # Extraer sueldo o valores por defecto
+            elemento_sueldo = tarjeta.select_one("p.fs16 span.salario") or tarjeta.select_one("span.tag_salary")
+            texto_sueldo = elemento_sueldo.get_text(strip=True) if elemento_sueldo else ""
+            if not texto_sueldo or "convenir" in texto_sueldo.lower():
+                sueldo = "No especifica sueldo"
+            else:
+                sueldo = texto_sueldo
+
+            # Extraer jornada o tipo de contrato si viene indicado
+            elemento_jornada = tarjeta.select_one("span.tag_jornada") or tarjeta.select_one("p.fs13 .i_time")
+            jornada = elemento_jornada.get_text(strip=True) if elemento_jornada else "No especifica horario"
 
             titulo = elemento_titulo.get_text(strip=True)
             link = elemento_titulo.get("href", "")
             if link and not link.startswith("http"):
                 link = f"https://www.computrabajo.cl{link}"
 
+            empresa_val = elemento_empresa.get_text(strip=True) if elemento_empresa else ""
+            ubicacion_val = elemento_ubicacion.get_text(strip=True) if elemento_ubicacion else ""
+
             resultados.append({
                 "titulo": titulo,
-                "empresa": elemento_empresa.get_text(strip=True) if elemento_empresa else "No especificada",
-                "ubicacion": elemento_ubicacion.get_text(strip=True) if elemento_ubicacion else "No especificada",
-                "modalidad": "Remoto" if es_remoto else "",
-                "publicado": elemento_publicado.get_text(strip=True) if elemento_publicado else "",
+                "empresa": empresa_val if empresa_val else "No especifica empresa",
+                "ubicacion": ubicacion_val if ubicacion_val else "No especifica ubicación",
+                "modalidad": "Remoto" if es_remoto else "Presencial / Híbrido",
+                "sueldo": sueldo,
+                "jornada": jornada,
+                "publicado": elemento_publicado.get_text(strip=True) if elemento_publicado else "Reciente",
                 "link": link,
             })
 
@@ -125,11 +137,6 @@ def buscar_computrabajo(palabra_clave: str, cantidad_paginas: int = 1) -> list[d
 def buscar_chiletrabajos(palabra_clave: str, cantidad_paginas: int = 1) -> list[dict]:
     """
     Busca ofertas reales en ChileTrabajos para la palabra clave dada.
-
-    El formulario de búsqueda del sitio usa nombres de campo numéricos
-    heredados ("2" para la palabra clave, "f"="2" fijo) en vez de nombres
-    descriptivos — no es un placeholder, se verificó en vivo contra el
-    HTML real del formulario en /encuentra-un-empleo.
     """
     resultados = []
     TAMANO_PAGINA = 30
@@ -168,21 +175,33 @@ def buscar_chiletrabajos(palabra_clave: str, cantidad_paginas: int = 1) -> list[
             elemento_ubicacion = (
                 elemento_empresa_ubicacion.select_one("a") if elemento_empresa_ubicacion else None
             )
-            empresa = "No especificada"
+            empresa = "No especifica empresa"
             if elemento_empresa_ubicacion is not None:
                 texto_meta = elemento_empresa_ubicacion.get_text(strip=True)
-                empresa = texto_meta.split(",")[0].strip() or "No especificada"
+                empresa = texto_meta.split(",")[0].strip() or "No especifica empresa"
 
+            # Chiletrabajos indica la modalidad o sueldo en tags secundarios
+            elemento_extra = tarjeta.select_one("span.salary") or tarjeta.select_one("span.type")
+            texto_extra = elemento_extra.get_text(strip=True) if elemento_extra else ""
+            
+            sueldo = "No especifica sueldo"
+            if "$" in texto_extra or "CLP" in texto_extra or any(c.isdigit() for c in texto_extra):
+                sueldo = texto_extra
+            
             link = elemento_titulo.get("href", "")
             if link and not link.startswith("http"):
                 link = f"https://www.chiletrabajos.cl{link}"
 
+            ubicacion_val = elemento_ubicacion.get_text(strip=True) if elemento_ubicacion else ""
+
             resultados.append({
                 "titulo": elemento_titulo.get_text(strip=True),
-                "empresa": empresa,
-                "ubicacion": elemento_ubicacion.get_text(strip=True) if elemento_ubicacion else "No especificada",
-                "modalidad": "",
-                "publicado": metas[1].get_text(strip=True) if len(metas) > 1 else "",
+                "empresa": empresa if empresa else "No especifica empresa",
+                "ubicacion": ubicacion_val if ubicacion_val else "No especifica ubicación",
+                "modalidad": "No especifica modalidad",
+                "sueldo": sueldo,
+                "jornada": "No especifica horario",
+                "publicado": metas[1].get_text(strip=True) if len(metas) > 1 else "Reciente",
                 "link": link,
             })
 
@@ -191,16 +210,7 @@ def buscar_chiletrabajos(palabra_clave: str, cantidad_paginas: int = 1) -> list[
 
 def buscar_getonbrd(palabra_clave: str, cantidad_paginas: int = 1) -> list[dict]:
     """
-    Busca empleos en Getonbrd usando su API pública REST oficial (libre de
-    bloqueos WAF/Cloudflare que sí afectan al scraping directo del HTML).
-    Devuelve lista de dicts compatibles con el dispatcher.
-
-    IMPORTANTE — limitación real de este endpoint: "company" en attributes
-    es solo una referencia JSON:API ({"data": {"id": ..., "type": "company"}}),
-    sin nombre embebido. El endpoint de detalle por job (/api/v0/jobs/{id})
-    que sí tendría el nombre completo devuelve 401 sin autenticación —
-    verificado en vivo. "empresa" queda honestamente "No especificada" en
-    vez de inventar un nombre o parsearlo del slug del id.
+    Busca empleos en Getonbrd usando su API pública REST oficial.
     """
     resultados = []
 
@@ -223,26 +233,34 @@ def buscar_getonbrd(palabra_clave: str, cantidad_paginas: int = 1) -> list[dict]
         for item in datos:
             attr = item.get("attributes", {})
             titulo = attr.get("title", "")
-            modalidad = "Remoto" if attr.get("remote") else "Presencial/Híbrido"
+            es_remoto = attr.get("remote", False)
+            modalidad = "Remoto" if es_remoto else "Presencial / Híbrido"
 
             paises = attr.get("countries") or []
-            ubicacion = ", ".join(paises) if paises else "No especificada"
+            ubicacion = ", ".join(paises) if paises else "No especifica ubicación"
 
-            # El link real vive en item["links"]["public_url"], no en
-            # attributes — attr.get("url") siempre devolvía vacío.
+            # Parsear sueldo si GetOnBrd lo expone en min_salary/max_salary
+            min_sal = attr.get("min_salary")
+            max_sal = attr.get("max_salary")
+            if min_sal and max_sal:
+                sueldo = f"${min_sal:,} - ${max_sal:,} USD".replace(",", ".")
+            else:
+                sueldo = "No especifica sueldo"
+
             link = item.get("links", {}).get("public_url", "")
 
-            # published_at es un timestamp Unix.
-            publicado = ""
+            publicado = "Reciente"
             timestamp = attr.get("published_at")
             if timestamp:
                 publicado = datetime.fromtimestamp(timestamp).strftime("%d-%m-%Y")
 
             resultados.append({
                 "titulo": titulo,
-                "empresa": "No especificada",
+                "empresa": "No especifica empresa",
                 "ubicacion": ubicacion,
                 "modalidad": modalidad,
+                "sueldo": sueldo,
+                "jornada": "Full-Time",
                 "publicado": publicado,
                 "link": link,
             })
