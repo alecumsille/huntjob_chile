@@ -1054,9 +1054,15 @@ git commit -m "refactor(cv): usa resumen+bullets de IA sobre secciones literales
 - Consumes: `NIVELES_IDIOMA`, `TIPOS_FORMACION`, `VALORES_POR_DEFECTO` de `core.perfil` (Task 2).
 - No cambia la firma de `generar_documentos()` — los call-sites en `app.py:572` y `app.py:748` no requieren cambios.
 
-- [ ] **Step 1: Actualizar el import de `core.perfil` en la línea 12**
+- [ ] **Step 1: Actualizar imports en `app.py`**
 
-Cambiar:
+Agregar `import copy` junto a los otros imports de la librería estándar en la línea 1 (`import base64`):
+```python
+import copy
+```
+(Necesario para `copy.deepcopy(VALORES_POR_DEFECTO)` en el botón "Limpiar campos del perfil" — `VALORES_POR_DEFECTO` contiene listas mutables y una copia superficial las compartiría por referencia entre sesiones, el mismo riesgo que ya se corrigió en `core/perfil.py` y `core/db.py` durante la revisión de la Tarea 2.)
+
+Cambiar la línea 12:
 ```python
 from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY
 ```
@@ -1211,7 +1217,7 @@ elif seccion == "Mi Perfil":
             st.success("Perfil guardado.", icon=":material/check_circle:")
     with col_sub2:
         if st.button("Limpiar campos del perfil", icon=":material/delete:", use_container_width=True):
-            guardar_perfil(contexto_usuario, dict(VALORES_POR_DEFECTO))
+            guardar_perfil(contexto_usuario, copy.deepcopy(VALORES_POR_DEFECTO))
             st.session_state.perfil_experiencia_editable = []
             st.session_state.perfil_formacion_editable = []
             st.session_state.perfil_idiomas_editable = []
