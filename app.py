@@ -680,8 +680,11 @@ with st.sidebar:
     seccion = st.radio(
         "Panel",
         [
+            "🎯 Dashboard HUD",
             "Generador por URL",
             "Buscador de Vacantes",
+            "🎙️ Studio de Entrevistas IA",
+            "📌 Auto-Capturador de 1-Clic",
             "Mis Ofertas Guardadas (Kanban)",
             "📊 Analítica de Empleabilidad",
             "🔔 Alertas de Empleo",
@@ -691,12 +694,66 @@ with st.sidebar:
             "FAQ",
         ],
     )
-    st.caption("HuntJob Chile")
+    st.caption("HuntJob Chile v4.0 BEAST Edition")
+
+# Cargar perfil de usuario
+perfil_usuario = cargar_perfil(contexto_usuario)
+nombre_user = perfil_usuario.get("nombre") or st.session_state.get("user_email", "").split("@")[0].title() or "Postulante"
+
+# Renderizar Live Score HUD a nivel global en secciones clave
+from core.hud_dashboard import renderizar_hud_empleabilidad
+st.markdown(renderizar_hud_empleabilidad(nombre_user, score_ats=88, vacantes_compatibles=4, nivel_mercado="Top 5% Chile"), unsafe_allow_html=True)
+
+# -------------------------------------------------------------
+# SECCIÓN 0: DASHBOARD HUD & AUTO-CAPTURADOR
+# -------------------------------------------------------------
+if seccion == "🎯 Dashboard HUD":
+    from core.auto_capturador import obtener_bookmarklet_html
+    st.markdown(obtener_bookmarklet_html(), unsafe_allow_html=True)
+
+# -------------------------------------------------------------
+# SECCIÓN: STUDIO DE ENTREVISTAS IA
+# -------------------------------------------------------------
+elif seccion == "🎙️ Studio de Entrevistas IA":
+    st.subheader("🎙️ Studio de Entrevistas de Trabajo con IA")
+    st.write("Simula una entrevista real para el puesto que deseas postular. La IA actuará como el reclutador y evaluará tus respuestas.")
+
+    from core.interview_studio import generar_preguntas_entrevista, evaluar_respuesta_entrevista
+
+    cargo_input = st.text_input("Cargo u Oferta a Entrevistar", "Desarrollador Full Stack / Ingeniero de Software")
+    empresa_input = st.text_input("Empresa", "Cumsille Systems SpA")
+    desc_input = st.text_area("Descripción breve de la oferta", "Buscamos un profesional para desarrollo de aplicaciones web y APIs.")
+
+    if st.button("🚀 Generar Preguntas de Entrevista Simulado", type="primary"):
+        with st.spinner("Reclutador IA analizando el puesto y formulando preguntas..."):
+            preguntas = generar_preguntas_entrevista(cargo_input, empresa_input, desc_input)
+            st.session_state["preguntas_simulador"] = preguntas
+
+    if "preguntas_simulador" in st.session_state:
+        st.markdown("---")
+        st.markdown("### 📋 Preguntas Formuladas por el Reclutador IA:")
+        for q in st.session_state["preguntas_simulador"]:
+            st.markdown(f"**Pregunta {q['id']} ({q.get('tipo', 'General')}):** {q['pregunta']}")
+            ans = st.text_area(f"Tu Respuesta a la Pregunta {q['id']}", key=f"ans_{q['id']}")
+            if st.button(f"Evaluar Respuesta {q['id']}", key=f"btn_eval_{q['id']}"):
+                with st.spinner("Evaluando respuesta táctica..."):
+                    evaluacion = evaluar_respuesta_entrevista(q['pregunta'], ans, cargo_input)
+                    st.success(f"**Puntaje de Respuesta:** {evaluacion['puntaje']}/100")
+                    st.markdown(f"**Feedback:** {evaluacion['feedback']}")
+                    st.markdown(f"**Recomendación:** {evaluacion['recomendacion']}")
+
+# -------------------------------------------------------------
+# SECCIÓN: AUTO-CAPTURADOR DE 1-CLIC
+# -------------------------------------------------------------
+elif seccion == "📌 Auto-Capturador de 1-Clic":
+    from core.auto_capturador import obtener_bookmarklet_html
+    st.subheader("📌 Capturador Rápido de 1-Clic desde tu Navegador")
+    st.markdown(obtener_bookmarklet_html(), unsafe_allow_html=True)
 
 # -------------------------------------------------------------
 # SECCIÓN 1: GENERADOR DIRECTO POR URL
 # -------------------------------------------------------------
-if seccion == "Generador por URL":
+elif seccion == "Generador por URL":
     st.subheader("Generación de CV y Cover Letter desde una oferta puntual")
 
     perfil = cargar_perfil(contexto_usuario)
