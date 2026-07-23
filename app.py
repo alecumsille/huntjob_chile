@@ -131,6 +131,15 @@ def _github_footer_b64() -> str:
     return _social_icon_b64("github")
 
 
+def _css_logo_b64() -> str:
+    """Devuelve el b64 del logo oficial de Cumsille Systems Suite."""
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "cumsille_systems_logo.png")
+    if os.path.exists(ruta):
+        with open(ruta, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    return ""
+
+
 def mostrar_faq() -> None:
     """Contenido estático de preguntas frecuentes — público, no requiere sesión."""
     with st.container(border=True):
@@ -372,13 +381,18 @@ if not st.session_state.get("autenticado", False):
         with st.expander("¿Qué es HuntJob Chile? Ver preguntas frecuentes (FAQ)"):
             mostrar_faq()
 
-        # Icono de GitHub centrado en el pie de página
+        # Icono de GitHub y Marca Cumsille Systems Suite centrados en el pie de página
         github_icon_b64 = _github_footer_b64()
+        css_logo_b64 = _css_logo_b64()
         st.markdown(
             f"""
-            <div style="text-align: center; margin-top: 25px; margin-bottom: 15px; display: flex; justify-content: center; align-items: center;">
+            <div style="text-align: center; margin-top: 25px; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; gap: 16px; flex-wrap: wrap;">
                 <a href="https://github.com/alecumsille" target="_blank" title="Perfil de GitHub — Alejandro Cumsille" style="display: inline-block; text-decoration: none; transition: transform 0.2s ease;">
-                    <img src="data:image/png;base64,{github_icon_b64}" width="40" height="40" alt="Alejandro Cumsille GitHub" style="display: block; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.12));">
+                    <img src="data:image/png;base64,{github_icon_b64}" width="38" height="38" alt="Alejandro Cumsille GitHub" style="display: block; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.12));">
+                </a>
+                <a href="https://cumsille.tech" target="_blank" title="Cumsille Systems Suite — Soluciones Tecnológicas B2B/B2G" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; background: #FFFFFF; border: 1px solid #CBD5E1; padding: 6px 14px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <img src="data:image/png;base64,{css_logo_b64}" height="26" alt="Cumsille Systems Suite">
+                    <span style="font-family: 'Quicksand', sans-serif; font-size: 0.82rem; font-weight: 700; color: #0F172A;">CUMSILLE SYSTEMS SUITE</span>
                 </a>
             </div>
             """,
@@ -523,7 +537,12 @@ components.html(
       <div class="left">
         <img class="logo" src="data:image/png;base64,{_logo_b64()}" alt="HuntJob Chile">
         <div class="texto-box">
-          <p class="titulo">HuntJob Chile</p>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <p class="titulo">HuntJob Chile</p>
+            <span style="font-size: 0.68rem; font-weight: 700; color: #D97706; background: #FEF3C7; padding: 2px 8px; border-radius: 8px; border: 1px solid #FCD34D; display: inline-flex; align-items: center; gap: 4px;">
+              <img src="data:image/png;base64,{_css_logo_b64()}" height="12" alt="CSS"> CUMSILLE SYSTEMS
+            </span>
+          </div>
           <p class="caption">Motor de postulaciones &mdash; extrae ofertas, analiza con IA y genera tu PDF.</p>
         </div>
       </div>
