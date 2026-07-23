@@ -539,9 +539,11 @@ components.html(
         <div class="texto-box">
           <div style="display: flex; align-items: center; gap: 8px;">
             <p class="titulo">HuntJob Chile</p>
-            <span style="font-size: 0.68rem; font-weight: 700; color: #D97706; background: #FEF3C7; padding: 2px 8px; border-radius: 8px; border: 1px solid #FCD34D; display: inline-flex; align-items: center; gap: 4px;">
-              <img src="data:image/png;base64,{_css_logo_b64()}" height="12" alt="CSS"> CUMSILLE SYSTEMS
-            </span>
+            <a href="https://cumsille.tech" target="_blank" style="text-decoration: none;">
+              <span style="font-size: 0.68rem; font-weight: 700; color: #D97706; background: #FEF3C7; padding: 2px 8px; border-radius: 8px; border: 1px solid #FCD34D; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                <img src="data:image/png;base64,{_css_logo_b64()}" height="12" alt="CSS"> CUMSILLE SYSTEMS
+              </span>
+            </a>
           </div>
           <p class="caption">Motor de postulaciones &mdash; extrae ofertas, analiza con IA y genera tu PDF.</p>
         </div>
