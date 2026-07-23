@@ -156,3 +156,53 @@ def formatear_perfil(perfil: dict) -> str:
         )
 
     return "\n".join(partes)
+
+
+def extraer_perfil_desde_texto_linkedin(texto: str) -> dict:
+    """
+    Inspirado en LinkedIn Profile Scraper & StaffSpy:
+    Parsea un texto plano (CV o export de perfil de LinkedIn) y extrae de forma
+    automática competencias técnicas, habilidades blandas, idiomas detectados,
+    años de experiencia aproximados y nivel de seniority.
+    """
+    import re
+    texto_lower = texto.lower()
+
+    competencias_detectadas = []
+    for skill in COMPETENCIAS_POPULARES:
+        pattern = r"\b" + re.escape(skill.lower()) + r"\b"
+        if re.search(pattern, texto_lower):
+            competencias_detectadas.append(skill)
+
+    blandas_detectadas = []
+    for soft in HABILIDADES_BLANDAS_POPULARES:
+        palabras_clave = [p.lower() for p in soft.split() if len(p) > 3]
+        if any(kw in texto_lower for kw in palabras_clave):
+            blandas_detectadas.append(soft)
+
+    idiomas_detectados = []
+    for idioma in IDIOMAS_POPULARES:
+        if idioma.lower() in texto_lower:
+            nivel = "Avanzado" if "avanzado" in texto_lower or "fluent" in texto_lower else "Intermedio"
+            idiomas_detectados.append({"idioma": idioma, "nivel": nivel})
+
+    seniority = "Junior"
+    anos_experiencia = 1
+    if any(k in texto_lower for k in ["lead", "director", "principal"]):
+        seniority = "Lead"
+        anos_experiencia = 8
+    elif any(k in texto_lower for k in ["senior", "sr.", "sr ", " 5+ ", " 8+ "]):
+        seniority = "Senior"
+        anos_experiencia = 5
+    elif any(k in texto_lower for k in ["semi senior", "ssr", " 3+ "]):
+        seniority = "Semi Senior"
+        anos_experiencia = 3
+
+    return {
+        "competencias_tecnicas": ", ".join(list(dict.fromkeys(competencias_detectadas))),
+        "habilidades_blandas": ", ".join(list(dict.fromkeys(blandas_detectadas[:5]))),
+        "idiomas": idiomas_detectados,
+        "seniority": seniority,
+        "anos_experiencia": anos_experiencia
+    }
+

@@ -59,3 +59,22 @@ def test_migrar_legado_precarga_competencias_desde_stack():
     perfil["competencias_tecnicas"] = ""
     resultado = _migrar_legado(perfil)
     assert resultado["competencias_tecnicas"] == "Python, FastAPI, PostgreSQL"
+
+
+def test_extraer_perfil_desde_texto_linkedin():
+    from core.perfil import extraer_perfil_desde_texto_linkedin
+    sample_text = """
+    Senior Software Engineer con 6+ años de experiencia.
+    Dominio de Python, React, SQL, Docker y AWS.
+    Liderazgo de Equipos y Comunicación Efectiva.
+    Inglés fluido (Avanzado).
+    """
+    res = extraer_perfil_desde_texto_linkedin(sample_text)
+    assert "Python" in res["competencias_tecnicas"]
+    assert "React" in res["competencias_tecnicas"]
+    assert "SQL" in res["competencias_tecnicas"]
+    assert "Liderazgo de Equipos" in res["habilidades_blandas"]
+    assert res["seniority"] == "Senior"
+    assert res["anos_experiencia"] == 5
+    assert any(i["idioma"] == "Inglés" for i in res["idiomas"])
+
