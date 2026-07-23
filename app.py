@@ -19,7 +19,17 @@ from core.motor_ia import (
     ErrorIA,
 )
 from core.portales import PORTALES, buscar_en_todos
-from core.perfil import cargar_perfil, guardar_perfil, NIVELES_SENIORITY, NIVELES_IDIOMA, TIPOS_FORMACION, VALORES_POR_DEFECTO
+from core.perfil import (
+    cargar_perfil,
+    guardar_perfil,
+    NIVELES_SENIORITY,
+    NIVELES_IDIOMA,
+    TIPOS_FORMACION,
+    IDIOMAS_POPULARES,
+    COMPETENCIAS_POPULARES,
+    HABILIDADES_BLANDAS_POPULARES,
+    VALORES_POR_DEFECTO,
+)
 from core.postulacion import generar_documentos
 from core.auth_supabase import obtener_usuario_desde_token, cerrar_sesion, SUPABASE_URL
 from core.db import (
@@ -1383,12 +1393,19 @@ elif seccion == "Mi Perfil":
 
     st.divider()
     st.markdown("#### Idiomas")
+    opts_idioma = IDIOMAS_POPULARES + ["Otro / Personalizado"]
     for indice, idioma in enumerate(st.session_state.perfil_idiomas_editable):
         clave = idioma["_key"]
         with st.container(border=True):
             col1, col2, col3 = st.columns([2, 2, 1])
             with col1:
-                idioma["idioma"] = st.text_input("Idioma", value=idioma.get("idioma", ""), key=f"idi_nombre_{clave}")
+                val_actual = idioma.get("idioma", "")
+                idx_idioma = IDIOMAS_POPULARES.index(val_actual) if val_actual in IDIOMAS_POPULARES else len(IDIOMAS_POPULARES)
+                sel_idioma = st.selectbox("Seleccionar Idioma", opts_idioma, index=idx_idioma, key=f"idi_sel_{clave}")
+                if sel_idioma == "Otro / Personalizado":
+                    idioma["idioma"] = st.text_input("Nombre del Idioma", value=val_actual if val_actual not in IDIOMAS_POPULARES else "", key=f"idi_nombre_{clave}")
+                else:
+                    idioma["idioma"] = sel_idioma
             with col2:
                 nivel_guardado = idioma.get("nivel", "Intermedio")
                 indice_nivel = NIVELES_IDIOMA.index(nivel_guardado) if nivel_guardado in NIVELES_IDIOMA else 1
@@ -1398,20 +1415,50 @@ elif seccion == "Mi Perfil":
                     st.session_state.perfil_idiomas_editable.pop(indice)
                     st.rerun()
     if st.button("+ Agregar idioma", icon=":material/add:", key="idi_agregar"):
-        st.session_state.perfil_idiomas_editable.append({"idioma": "", "nivel": "Intermedio", "_key": str(uuid.uuid4())})
+        st.session_state.perfil_idiomas_editable.append({"idioma": "Español", "nivel": "Intermedio", "_key": str(uuid.uuid4())})
         st.rerun()
 
     st.divider()
-    competencias_tecnicas = st.text_area(
-        "Competencias técnicas y manejo de software (una por línea)",
-        value=perfil_actual["competencias_tecnicas"],
-        height=120,
+    st.markdown("#### Competencias técnicas y manejo de software")
+    comp_actuales = [linea.strip() for linea in (perfil_actual.get("competencias_tecnicas") or "").split("\n") if linea.strip()]
+    pre_seleccionadas = [c for c in comp_actuales if c in COMPETENCIAS_POPULARES]
+    custom_actuales = "\n".join([c for c in comp_actuales if c not in COMPETENCIAS_POPULARES])
+
+    seleccionadas_comp = st.multiselect(
+        "Selección rápida de tecnologías y herramientas principales:",
+        options=COMPETENCIAS_POPULARES,
+        default=pre_seleccionadas,
+        key="ms_comp_tecnicas"
     )
-    habilidades_blandas = st.text_area(
-        "Habilidades blandas (una por línea)",
-        value=perfil_actual["habilidades_blandas"],
-        height=120,
+    comp_extra = st.text_area(
+        "Otras competencias o software adicional (una por línea):",
+        value=custom_actuales,
+        height=80,
+        key="ta_comp_extra"
     )
+    lista_final_comp = list(seleccionadas_comp) + [c.strip() for c in comp_extra.split("\n") if c.strip() and c.strip() not in seleccionadas_comp]
+    competencias_tecnicas = "\n".join(lista_final_comp)
+
+    st.divider()
+    st.markdown("#### Habilidades blandas")
+    blandas_actuales = [linea.strip() for linea in (perfil_actual.get("habilidades_blandas") or "").split("\n") if linea.strip()]
+    pre_blandas = [b for b in blandas_actuales if b in HABILIDADES_BLANDAS_POPULARES]
+    custom_blandas = "\n".join([b for b in blandas_actuales if b not in HABILIDADES_BLANDAS_POPULARES])
+
+    seleccionadas_blandas = st.multiselect(
+        "Selección rápida de habilidades blandas clave:",
+        options=HABILIDADES_BLANDAS_POPULARES,
+        default=pre_blandas,
+        key="ms_habilidades_blandas"
+    )
+    blandas_extra = st.text_area(
+        "Otras habilidades blandas adicionales (una por línea):",
+        value=custom_blandas,
+        height=80,
+        key="ta_blandas_extra"
+    )
+    lista_final_blandas = list(seleccionadas_blandas) + [b.strip() for b in blandas_extra.split("\n") if b.strip() and b.strip() not in seleccionadas_blandas]
+    habilidades_blandas = "\n".join(lista_final_blandas)
 
     col_sub1, col_sub2 = st.columns(2)
     with col_sub1:

@@ -41,6 +41,19 @@ NIVELES_SENIORITY = ["Junior", "Semi Senior", "Senior", "Lead"]
 NIVELES_IDIOMA = ["Básico", "Intermedio", "Avanzado", "Nativo"]
 TIPOS_FORMACION = ["Carrera", "Curso", "Certificación"]
 
+IDIOMAS_POPULARES = ["Español", "Inglés", "Portugués", "Alemán", "Francés", "Italiano", "Chino Mandarín", "Japonés"]
+COMPETENCIAS_POPULARES = [
+    "Python", "JavaScript", "TypeScript", "React", "Node.js", "SQL", "PostgreSQL",
+    "Docker", "AWS", "Git / GitHub", "Excel Avanzado", "Power BI", "Scrum / Agile",
+    "Java", "C# / .NET", "PHP", "Flutter", "Kubernetes", "Linux / Bash", "HTML/CSS"
+]
+HABILIDADES_BLANDAS_POPULARES = [
+    "Liderazgo de Equipos", "Comunicación Efectiva", "Resolución de Problemas",
+    "Trabajo en Equipo", "Adaptabilidad y Flexibilidad", "Pensamiento Crítico",
+    "Gestión del Tiempo", "Negociación", "Pensamiento Analítico",
+    "Orientación a Resultados", "Autonomía y Proactividad"
+]
+
 
 def lineas_no_vacias(texto: str) -> list[str]:
     """
