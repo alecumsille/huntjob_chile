@@ -167,10 +167,57 @@ if not st.session_state.get("autenticado", False):
             st.session_state["user_email"] = usuario["email"]
             st.session_state["access_token"] = token_url
             st.session_state["proveedor_auth"] = usuario["proveedor"]
+            
+            # Guardar token en localStorage para recordar sesión al volver
+            components.html(
+                f"""
+                <script>
+                try {{
+                    const store = (window.parent && window.parent.localStorage) ? window.parent.localStorage : window.localStorage;
+                    store.setItem('hj_access_token', '{token_url}');
+                }} catch(e) {{
+                    console.error('Error al guardar token de sesión:', e);
+                }}
+                </script>
+                """,
+                height=0,
+            )
             st.query_params.clear()
             st.rerun()
         else:
             st.query_params.clear()
+            components.html(
+                """
+                <script>
+                try {
+                    const store = (window.parent && window.parent.localStorage) ? window.parent.localStorage : window.localStorage;
+                    store.removeItem('hj_access_token');
+                } catch(e) {}
+                </script>
+                """,
+                height=0,
+            )
+    else:
+        # Intentar auto-restaurar sesión desde localStorage si el usuario re-ingresa a la web
+        components.html(
+            """
+            <script>
+            try {
+                const parentWin = window.parent || window.top;
+                const store = (parentWin && parentWin.localStorage) ? parentWin.localStorage : window.localStorage;
+                const savedToken = store.getItem('hj_access_token');
+                if (savedToken && !parentWin.location.search.includes('access_token')) {
+                    const url = new URL(parentWin.location.href);
+                    url.searchParams.set('access_token', savedToken);
+                    parentWin.location.href = url.toString();
+                }
+            } catch(e) {
+                console.error('Error restaurando sesión:', e);
+            }
+            </script>
+            """,
+            height=0,
+        )
 
 if not st.session_state.get("autenticado", False):
     col_a, col_b, col_c = st.columns([1, 2, 1])
@@ -492,6 +539,17 @@ with st.sidebar:
         if contexto_usuario:
             cerrar_sesion(contexto_usuario["access_token"])
         st.session_state.clear()
+        components.html(
+            """
+            <script>
+            try {
+                const store = (window.parent && window.parent.localStorage) ? window.parent.localStorage : window.localStorage;
+                store.removeItem('hj_access_token');
+            } catch(e) {}
+            </script>
+            """,
+            height=0,
+        )
         st.rerun()
     st.divider()
     seccion = st.radio(
