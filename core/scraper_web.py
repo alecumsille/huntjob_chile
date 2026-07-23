@@ -268,3 +268,40 @@ def buscar_getonbrd(palabra_clave: str, cantidad_paginas: int = 1) -> list[dict]
 
     return resultados
 
+
+def buscar_linkedin(palabra_clave: str, cantidad_paginas: int = 1) -> list[dict]:
+    """
+    Busca ofertas públicas de empleo en LinkedIn Jobs Chile sin autenticación.
+    """
+    resultados = []
+    palabra_encoded = requests.utils.quote(palabra_clave)
+    url_busqueda = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={palabra_encoded}&location=Chile&start=0"
+
+    try:
+        respuesta = requests.get(url_busqueda, headers=HEADERS, timeout=TIMEOUT_SEGUNDOS)
+        if respuesta.status_code == 200:
+            soup = BeautifulSoup(respuesta.text, "html.parser")
+            tarjetas = soup.select("li")
+            for tarjeta in tarjetas[:15]:
+                elem_titulo = tarjeta.select_one("h3.base-search-card__title")
+                elem_empresa = tarjeta.select_one("h4.base-search-card__subtitle")
+                elem_ubicacion = tarjeta.select_one("span.job-search-card__location")
+                elem_link = tarjeta.select_one("a.base-card__full-link")
+
+                if elem_titulo and elem_link:
+                    link_bruto = elem_link.get("href", "").split("?")[0]
+                    resultados.append({
+                        "titulo": elem_titulo.get_text(strip=True),
+                        "empresa": elem_empresa.get_text(strip=True) if elem_empresa else "Empresa Confidencial",
+                        "ubicacion": elem_ubicacion.get_text(strip=True) if elem_ubicacion else "Chile",
+                        "modalidad": "Presencial / Híbrido",
+                        "sueldo": "No especifica sueldo",
+                        "jornada": "Full-Time",
+                        "publicado": "Reciente",
+                        "link": link_bruto,
+                    })
+    except Exception:
+        pass
+
+    return resultados
+
