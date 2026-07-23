@@ -1,13 +1,11 @@
 """
 Interview Studio Component — Simulador Táctico de Entrevistas de Trabajo con IA.
 HuntJob Chile.
-
-Genera preguntas personalizadas para una oferta laboral dada y evalúa la respuesta del postulante
-otorgando feedback táctico en 3 dimensiones: Palabras Clave, Tono Profesional y Puntos de Mejora.
 """
 
+import json
 from typing import List, Dict
-from core.motor_ia import _invocar_gemini_json
+from core.motor_ia import _ejecutar_con_fallback
 
 
 def generar_preguntas_entrevista(oferta_titulo: str, oferta_empresa: str, oferta_descripcion: str) -> List[Dict[str, str]]:
@@ -15,35 +13,27 @@ def generar_preguntas_entrevista(oferta_titulo: str, oferta_empresa: str, oferta
     Genera 3 preguntas estratégicas de entrevista simulada específicas para la vacante dada.
     """
     prompt = f"""
-    Eres un reclutador senior experto en Selección de Personal en Chile para la empresa {oferta_empresa or 'Chile'}.
+    Eres un reclutador senior en Chile para {oferta_empresa or 'la empresa'}.
     Genera 3 preguntas de entrevista clave para el cargo: '{oferta_titulo}'.
-    Descripción de la oferta: {oferta_descripcion[:1000]}
+    Descripción: {oferta_descripcion[:800]}
 
-    Responde estrictamente en formato JSON con la siguiente estructura:
+    Responde en JSON:
     [
-        {{
-            "id": 1,
-            "tipo": "Técnica / Competencias",
-            "pregunta": "¿Texto de la pregunta 1?"
-        }},
-        {{
-            "id": 2,
-            "tipo": "Conductual / Situacional",
-            "pregunta": "¿Texto de la pregunta 2?"
-        }},
-        {{
-            "id": 3,
-            "tipo": "Ajuste Cultural / Motivación",
-            "pregunta": "¿Texto de la pregunta 3?"
-        }}
+        {{"id": 1, "tipo": "Técnica", "pregunta": "¿Pregunta 1?"}},
+        {{"id": 2, "tipo": "Conductual", "pregunta": "¿Pregunta 2?"}},
+        {{"id": 3, "tipo": "Ajuste Cultural", "pregunta": "¿Pregunta 3?"}}
     ]
     """
 
-    res = _invocar_gemini_json(prompt)
-    if isinstance(res, list) and len(res) >= 1:
-        return res
+    try:
+        raw_res = _ejecutar_con_fallback(prompt, response_mime_type="application/json")
+        clean_res = raw_res.replace("```json", "").replace("```", "").strip()
+        parsed = json.loads(clean_res)
+        if isinstance(parsed, list) and len(parsed) >= 1:
+            return parsed
+    except Exception:
+        pass
 
-    # Fallback predeterminado si falla el JSON de IA
     return [
         {"id": 1, "tipo": "Competencias Técnicas", "pregunta": f"¿Cómo aplicas tus habilidades principales para el cargo de {oferta_titulo}?"},
         {"id": 2, "tipo": "Conductual", "pregunta": "Cuéntame sobre un desafío técnico o proyecto complejo que hayas resuelto recientemente."},
@@ -60,26 +50,31 @@ def evaluar_respuesta_entrevista(pregunta: str, respuesta_postulante: str, ofert
             "puntaje": 40,
             "feedback": "La respuesta es demasiado breve. Se recomienda dar ejemplos concretos con el método STAR (Situación, Tarea, Acción, Resultado).",
             "palabras_clave_usadas": [],
-            "recomendacion": "Amplía tu respuesta mencionando métricas o logros cuantificables."
+            "recomendacion": "Amplía tu respuesta mencionando logros cuantificables."
         }
 
     prompt = f"""
-    Evalúa la siguiente respuesta de un candidato en una entrevista para el cargo '{oferta_titulo}'.
+    Evalúa esta respuesta en una entrevista para '{oferta_titulo}'.
     Pregunta: {pregunta}
-    Respuesta del postulante: {respuesta_postulante}
+    Respuesta: {respuesta_postulante}
 
-    Responde en formato JSON con la estructura:
+    Responde en JSON:
     {{
         "puntaje": 85,
-        "feedback": "Análisis táctico de la respuesta...",
-        "palabras_clave_usadas": ["palabra1", "palabra2"],
-        "recomendacion": "Sugerencia clave para la entrevista real..."
+        "feedback": "Análisis táctico...",
+        "palabras_clave_usadas": ["experiencia"],
+        "recomendacion": "Sugerencia..."
     }}
     """
 
-    res = _invocar_gemini_json(prompt)
-    if isinstance(res, dict) and "puntaje" in res:
-        return res
+    try:
+        raw_res = _ejecutar_con_fallback(prompt, response_mime_type="application/json")
+        clean_res = raw_res.replace("```json", "").replace("```", "").strip()
+        parsed = json.loads(clean_res)
+        if isinstance(parsed, dict) and "puntaje" in parsed:
+            return parsed
+    except Exception:
+        pass
 
     return {
         "puntaje": 80,

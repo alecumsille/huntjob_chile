@@ -700,15 +700,14 @@ with st.sidebar:
 perfil_usuario = cargar_perfil(contexto_usuario)
 nombre_user = perfil_usuario.get("nombre") or st.session_state.get("user_email", "").split("@")[0].title() or "Postulante"
 
-# Renderizar Live Score HUD a nivel global en secciones clave
-from core.hud_dashboard import renderizar_hud_empleabilidad
-st.markdown(renderizar_hud_empleabilidad(nombre_user, score_ats=88, vacantes_compatibles=4, nivel_mercado="Top 5% Chile"), unsafe_allow_html=True)
-
 # -------------------------------------------------------------
 # SECCIÓN 0: DASHBOARD HUD & AUTO-CAPTURADOR
 # -------------------------------------------------------------
 if seccion == "🎯 Dashboard HUD":
+    from core.hud_dashboard import renderizar_hud_empleabilidad
     from core.auto_capturador import obtener_bookmarklet_html
+
+    st.markdown(renderizar_hud_empleabilidad(nombre_user, score_ats=88, vacantes_compatibles=4, nivel_mercado="Top 5% Chile"), unsafe_allow_html=True)
     st.markdown(obtener_bookmarklet_html(), unsafe_allow_html=True)
 
 # -------------------------------------------------------------
