@@ -4,3 +4,4 @@ beautifulsoup4
 reportlab
 pyyaml
 supabase
+pytest
