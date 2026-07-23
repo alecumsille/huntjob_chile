@@ -459,6 +459,23 @@ with st.sidebar:
     correo = st.session_state.get("user_email", "")
     st.markdown(f"**Cuenta:** {proveedor}" + (f"  \n{correo}" if correo else ""))
 
+    if st.button("🚪 Cerrar Sesión (Logout)", key="btn_logout_sidebar", use_container_width=True, type="secondary"):
+        if contexto_usuario:
+            cerrar_sesion(contexto_usuario["access_token"])
+        st.session_state.clear()
+        components.html(
+            """
+            <script>
+            try {
+                const store = (window.parent && window.parent.localStorage) ? window.parent.localStorage : window.localStorage;
+                store.removeItem('hj_access_token');
+            } catch(e) {}
+            </script>
+            """,
+            height=0,
+        )
+        st.rerun()
+
     if contexto_usuario:
         try:
             plan = obtener_plan(contexto_usuario["user_id"], contexto_usuario["access_token"])
