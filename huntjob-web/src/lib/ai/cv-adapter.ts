@@ -52,8 +52,7 @@ RULES:
 Title: ${jobOffer.title}
 Company: ${jobOffer.company}
 Description: ${jobOffer.rawDescription}
-Requirements: ${jobOffer.requirements.join(', ')}
-Keywords: ${jobOffer.keywords.join(', ')}
+Requirements: ${jobOffer.mandatoryRequirements.join(', ')}
 
 --- ORIGINAL CV ---
 ${JSON.stringify(originalCv, null, 2)}

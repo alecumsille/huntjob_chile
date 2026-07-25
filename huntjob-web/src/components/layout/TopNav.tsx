@@ -3,15 +3,32 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Briefcase, LayoutDashboard, Settings } from "lucide-react";
+import { useEffect, useState } from "react";
+import { createClient } from "@/utils/supabase/client";
+import { Briefcase, LayoutDashboard, Settings, Users } from "lucide-react";
+
+const ADMIN_EMAILS = ["alecumsille@gmail.com", "ale@cumsille.tech"];
 
 export function TopNav() {
   const pathname = usePathname();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function checkAdmin() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && user.email && ADMIN_EMAILS.includes(user.email)) {
+        setIsAdmin(true);
+      }
+    }
+    checkAdmin();
+  }, [supabase]);
 
   const navItems = [
     { name: "Características", href: "/features", icon: Briefcase },
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Configuración", href: "/settings", icon: Settings },
+    ...(isAdmin ? [{ name: "Usuarios", href: "/dashboard/users", icon: Users }] : []),
+    { name: "Configuración", href: "/dashboard/settings", icon: Settings },
   ];
 
   return (

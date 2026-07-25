@@ -7,8 +7,6 @@ import {
   Bell, 
   CreditCard,
   UploadCloud,
-  FileText,
-  MapPin,
   DollarSign,
   Laptop
 } from "lucide-react";

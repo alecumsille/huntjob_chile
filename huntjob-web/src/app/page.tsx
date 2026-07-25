@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight, Sparkles, Briefcase, Zap, Target, LineChart, CheckCircle2 } from "lucide-react";
+import { Sparkles, Briefcase, Zap, Target, LineChart, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
@@ -62,6 +62,7 @@ export default function HomePage() {
           className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8"
         >
           <Button 
+            // @ts-expect-error shadcn ui base-ui button doesn't expose asChild natively
             asChild
             size="lg" 
             className="h-16 px-10 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 font-bold text-lg w-full sm:w-auto shadow-[0_0_40px_rgba(139,92,246,0.3)] hover:shadow-[0_0_60px_rgba(139,92,246,0.5)] border-0 transition-all duration-300 transform hover:-translate-y-1 group"
@@ -72,6 +73,7 @@ export default function HomePage() {
           </Button>
           
           <Button 
+            // @ts-expect-error shadcn ui base-ui button doesn't expose asChild natively
             asChild
             size="lg" 
             variant="outline"

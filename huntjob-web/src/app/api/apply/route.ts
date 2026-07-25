@@ -2,14 +2,47 @@ import { NextResponse } from 'next/server';
 import { scrapeJobOffer } from '@/lib/scraper/extractor';
 import { adaptCvToJob } from '@/lib/ai/cv-adapter';
 import { CVData } from '@/lib/document/docx-generator';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
+import { z } from 'zod';
+
+const applySchema = z.object({
+  url: z.string().url("Debe ser una URL válida").max(500, "URL demasiado larga"),
+  profile: z.record(z.string(), z.any()).refine(
+    val => JSON.stringify(val).length < 50000, 
+    "El perfil es demasiado extenso"
+  )
+});
 
 export async function POST(req: Request) {
   try {
-    const { url, profile } = await req.json();
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co',
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy_key',
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+        },
+      }
+    );
 
-    if (!url || !profile) {
-      return NextResponse.json({ error: 'Missing url or profile data' }, { status: 400 });
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const json = await req.json();
+    const parsedData = applySchema.safeParse(json);
+
+    if (!parsedData.success) {
+      return NextResponse.json({ error: 'Invalid input', details: parsedData.error.issues }, { status: 400 });
+    }
+
+    const { url, profile } = parsedData.data;
 
     console.log(`[Orchestrator] Starting workflow for URL: ${url}`);
 
@@ -35,10 +68,10 @@ export async function POST(req: Request) {
       adaptedCv
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Orchestrator] Error:', error);
     return NextResponse.json(
-      { error: 'Failed to process application workflow', details: error.message },
+      { error: 'Failed to process application workflow', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

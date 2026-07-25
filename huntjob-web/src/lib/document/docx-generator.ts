@@ -203,7 +203,7 @@ export class DocxGenerator {
         bottom: {
           color: "000000",
           space: 1,
-          value: "single",
+          style: "single",
           size: 6,
         },
       },

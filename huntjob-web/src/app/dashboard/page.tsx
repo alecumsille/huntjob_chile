@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -13,7 +14,6 @@ import {
   Briefcase,
   Link as LinkIcon,
   Loader2,
-  FileText,
   Download
 } from "lucide-react";
 
@@ -21,7 +21,7 @@ export default function DashboardPage() {
   const [url, setUrl] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [workflowStatus, setWorkflowStatus] = useState("");
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
 
   const [activities, setActivities] = useState([
     { role: "Senior Frontend Engineer", company: "Stripe", status: "Enviado por IA", time: "Hace 2 horas", color: "text-emerald-400", bg: "bg-emerald-500/10" },
@@ -119,12 +119,13 @@ export default function DashboardPage() {
       const objUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = objUrl;
-      a.download = `CV_Optimizado_${result.jobOffer.company.replace(/ /g, '_')}.docx`;
+      a.download = `CV_Optimizado_${(result as any).jobOffer.company.replace(/ /g, '_')}.docx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(objUrl);
-    } catch(e) {
+    } catch(err) {
+      console.error(err);
       alert("Error descargando el DOCX");
     }
   };
@@ -252,10 +253,10 @@ export default function DashboardPage() {
                       CV Generado Exitosamente
                     </h3>
                     <p className="text-sm text-zinc-400 mt-1">
-                      Adaptado para el rol de <strong className="text-white">{result.jobOffer.title}</strong> en <strong className="text-white">{result.jobOffer.company}</strong>
+                      Adaptado para el rol de <strong className="text-white">{(result as any).jobOffer.title}</strong> en <strong className="text-white">{(result as any).jobOffer.company}</strong>
                     </p>
                     <div className="flex flex-wrap gap-2 mt-3">
-                      {result.jobOffer.keywords?.slice(0, 5).map((kw: string, idx: number) => (
+                      {(result as any).jobOffer.mandatoryRequirements?.slice(0, 5).map((kw: string, idx: number) => (
                         <span key={idx} className="text-xs bg-white/10 text-zinc-300 px-2 py-1 rounded-md">
                           {kw}
                         </span>

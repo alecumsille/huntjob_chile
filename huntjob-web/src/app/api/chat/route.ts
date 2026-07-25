@@ -1,13 +1,57 @@
 import { streamText } from 'ai';
 import { google } from '@ai-sdk/google';
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
+import { z } from 'zod';
+
+// Define the validation schema
+const chatSchema = z.object({
+  messages: z.array(
+    z.object({
+      role: z.enum(['user', 'assistant', 'system', 'data']),
+      content: z.string().max(4000, "El mensaje es demasiado largo"),
+    })
+  ).max(50, "Demasiados mensajes en la conversación"),
+  context: z.object({
+    company: z.string().max(100).optional(),
+    role: z.string().max(100).optional(),
+    type: z.enum(['technical', 'hr', 'general']).optional(),
+  }).optional(),
+});
 
 // Opt out of caching; we always want dynamic responses
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
-    const { messages, context } = await req.json();
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co',
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy_key',
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+        },
+      }
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const json = await req.json();
+    const parsedData = chatSchema.safeParse(json);
+    
+    if (!parsedData.success) {
+      return NextResponse.json({ error: 'Invalid input', details: parsedData.error.issues }, { status: 400 });
+    }
+
+    const { messages, context } = parsedData.data;
 
     // System prompt para contextualizar al agente
     const systemPrompt = `Eres un reclutador experto y entrevistador técnico simulando una entrevista para la empresa ${context?.company || 'una empresa tecnológica'} para el puesto de ${context?.role || 'Ingeniero'}.
@@ -25,7 +69,7 @@ export async function POST(req: Request) {
     const result = streamText({
       model: google('gemini-1.5-flash-latest'),
       system: systemPrompt,
-      messages: messages as any[],
+      messages: messages as { role: 'user' | 'assistant' | 'system', content: string }[],
       temperature: 0.7,
     });
 

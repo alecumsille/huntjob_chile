@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, Briefcase, Calendar, Building, Search, ArrowRight, Filter } from "lucide-react";
@@ -77,7 +77,8 @@ export default function ApplicationsPage() {
       } else {
         setApplications(data as Application[]);
       }
-    } catch (e) {
+    } catch (err) {
+      console.error(err);
       setApplications(mockApplications);
     } finally {
       setLoading(false);
@@ -85,6 +86,7 @@ export default function ApplicationsPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
     fetchApplications();
   }, []);
 

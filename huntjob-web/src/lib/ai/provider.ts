@@ -1,6 +1,6 @@
 import { openai } from '@ai-sdk/openai';
 import { google } from '@ai-sdk/google';
-import { generateText, generateObject, LanguageModel } from 'ai';
+import { LanguageModel } from 'ai';
 
 /**
  * Fallback AI execution strategy.

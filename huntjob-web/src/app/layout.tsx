@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { TopNav } from "@/components/layout/TopNav";
+import { Footer } from "@/components/layout/Footer";
 import { PremiumBackground } from "@/components/ui/PremiumBackground";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -33,6 +34,7 @@ export default function RootLayout({
         <PremiumBackground />
         <TopNav />
         <main className="flex-1 flex flex-col">{children}</main>
+        <Footer />
       </body>
     </html>
   );

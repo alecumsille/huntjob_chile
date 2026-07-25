@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, FileText, MoreVertical, Edit2, Trash2, Eye, Download, Loader2 } from "lucide-react";
+import { Plus, FileText, MoreVertical, Edit2, Eye, Download, Loader2 } from "lucide-react";
 
 export default function ResumesPage() {
   const containerVariants = {
