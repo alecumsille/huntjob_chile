@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: [],
@@ -13,6 +14,11 @@ const nextConfig: NextConfig = {
   },
   eslint: {
     ignoreDuringBuilds: true,
+  },
+  experimental: {
+    turbopack: {
+      root: path.join(process.cwd(), ".."),
+    },
   },
 };
 
