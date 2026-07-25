@@ -120,7 +120,9 @@ export default function DashboardPage() {
   }, [supabase]);
 
   useEffect(() => {
-    loadDashboardData();
+    (async () => {
+      await loadDashboardData();
+    })();
   }, [loadDashboardData]);
 
   const runApply = async (profile: CVData) => {
