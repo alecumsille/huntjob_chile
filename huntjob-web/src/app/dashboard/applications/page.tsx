@@ -61,9 +61,7 @@ export default function ApplicationsPage() {
 
   const supabase = createClient();
 
-  useEffect(() => {
-    fetchApplications();
-  }, []);
+
 
   const fetchApplications = async () => {
     try {
@@ -85,6 +83,10 @@ export default function ApplicationsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchApplications();
+  }, []);
 
   const getStatusBadge = (status: Application['status']) => {
     switch (status) {
