@@ -106,3 +106,17 @@ export function sanitizeChatMessage(content: string): SanitizeResult {
 
   return { safe: true, cleanedText: cleaned };
 }
+
+/**
+ * Sanitiza las respuestas generadas por la IA para prevenir XSS o inyección de scripts.
+ */
+export function sanitizeAiOutput(output: string): string {
+  if (!output) return '';
+  return output
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/onerror=/gi, '')
+    .replace(/onload=/gi, '');
+}
+
