@@ -16,73 +16,35 @@ interface Application {
   notes?: string;
 }
 
-const mockApplications: Application[] = [
-  {
-    id: '1',
-    company_name: 'TechNova',
-    job_title: 'Senior Frontend Engineer',
-    status: 'interview_scheduled',
-    applied_at: '2024-07-20T10:00:00Z',
-    notes: 'Primera entrevista técnica el martes.'
-  },
-  {
-    id: '2',
-    company_name: 'Acme Corp',
-    job_title: 'Full Stack Developer',
-    status: 'pending',
-    applied_at: '2024-07-22T14:30:00Z',
-  },
-  {
-    id: '3',
-    company_name: 'Global Solutions',
-    job_title: 'React Native Developer',
-    status: 'rejected',
-    applied_at: '2024-07-15T09:15:00Z',
-  },
-  {
-    id: '4',
-    company_name: 'StartupX',
-    job_title: 'Lead Software Engineer',
-    status: 'offer',
-    applied_at: '2024-07-10T16:45:00Z',
-    notes: 'Oferta inicial $120k, intentar negociar.'
-  }
-];
-
 export default function ApplicationsPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
-  
+
   // Form state
   const [newApp, setNewApp] = useState({ company_name: '', job_title: '', status: 'pending' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const supabase = createClient();
 
-
-
   const fetchApplications = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('applications')
-        .select('*')
-        .order('applied_at', { ascending: false });
-        
-      if (error || !data || data.length === 0) {
-        // Fallback a datos mockeados si no existe la tabla o está vacía
-        setApplications(mockApplications);
-      } else {
-        setApplications(data as Application[]);
-      }
-    } catch (err) {
-      console.error(err);
-      setApplications(mockApplications);
-    } finally {
-      setLoading(false);
+    setLoading(true);
+    setLoadError(false);
+    const { data, error } = await supabase
+      .from('applications')
+      .select('*')
+      .order('applied_at', { ascending: false });
+
+    if (error) {
+      console.error(error);
+      setLoadError(true);
+      setApplications([]);
+    } else {
+      setApplications((data ?? []) as Application[]);
     }
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -139,6 +101,14 @@ export default function ApplicationsPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
+      {loadError && (
+        <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex items-center justify-between">
+          <p className="text-sm text-rose-400">No pudimos cargar tus postulaciones.</p>
+          <Button variant="outline" size="sm" onClick={fetchApplications} className="border-rose-500/30 text-rose-400 hover:bg-rose-500/10">
+            Reintentar
+          </Button>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -261,10 +231,12 @@ export default function ApplicationsPage() {
           ))
         )}
         
-        {!loading && filteredApps.length === 0 && (
+        {!loading && !loadError && filteredApps.length === 0 && (
           <div className="col-span-full py-12 text-center border border-dashed border-white/10 rounded-xl bg-zinc-900/20">
             <Building className="w-8 h-8 text-zinc-600 mx-auto mb-3" />
-            <p className="text-zinc-400 text-sm">No se encontraron postulaciones</p>
+            <p className="text-zinc-400 text-sm">
+              {applications.length === 0 ? 'Aún no registras postulaciones' : 'No se encontraron postulaciones con ese filtro'}
+            </p>
           </div>
         )}
       </div>
