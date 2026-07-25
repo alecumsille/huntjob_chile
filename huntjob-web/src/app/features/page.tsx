@@ -172,10 +172,9 @@ export default function FeaturesPage() {
           <p className="text-zinc-400 mb-10 max-w-xl mx-auto relative z-10">
             Únete a cientos de profesionales que están acelerando sus carreras profesionales con IA.
           </p>
-          <Button asChild size="lg" className="h-14 px-8 rounded-full bg-white text-black hover:bg-zinc-200 font-bold text-lg relative z-10">
+          <Button asChild size="lg" className="h-14 px-8 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white border-0 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 font-bold text-lg relative z-10 shadow-[0_0_30px_rgba(139,92,246,0.3)] hover:shadow-[0_0_50px_rgba(139,92,246,0.5)] transition-all duration-300">
             <Link href="/auth/login">
               Comenzar Gratis ahora
-              <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
         </motion.div>
