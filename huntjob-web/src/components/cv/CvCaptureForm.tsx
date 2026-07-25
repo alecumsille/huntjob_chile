@@ -200,6 +200,11 @@ export function CvCaptureForm({ onComplete, onCancel }: CvCaptureFormProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {parseError && (
+          <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+            {parseError}
+          </p>
+        )}
         {formError && <p className="text-sm text-rose-400">{formError}</p>}
 
         <div className="grid sm:grid-cols-2 gap-4">
