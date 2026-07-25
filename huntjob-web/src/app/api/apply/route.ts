@@ -59,6 +59,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Validar límite de créditos de IA antes de gastar recursos en scraping/IA.
+    // Si no se puede leer el perfil (fila ausente, error de red), no bloqueamos:
+    // es una degradación de negocio, no un control de seguridad.
+    const { data: creditProfile, error: creditError } = await supabase
+      .from('profiles')
+      .select('ai_credits_used, ai_credits_limit')
+      .eq('id', user.id)
+      .single();
+
+    if (!creditError && creditProfile) {
+      const used = creditProfile.ai_credits_used ?? 0;
+      const limit = creditProfile.ai_credits_limit ?? 10;
+      if (used >= limit) {
+        auditLog({
+          action: 'apply.blocked',
+          userId: user.id,
+          path: '/api/apply',
+          details: { reason: 'ai_credits_limit alcanzado', used, limit },
+        });
+        return NextResponse.json(
+          { error: `Alcanzaste el límite de ${limit} créditos de IA de tu plan. Mejora tu plan en Configuración para seguir postulando.` },
+          { status: 403 }
+        );
+      }
+    }
+
     const json = await req.json();
 
     // Validar tamaño del payload
