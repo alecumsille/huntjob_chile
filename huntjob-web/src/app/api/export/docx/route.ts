@@ -3,6 +3,8 @@ import { DocxGenerator, CVData } from '@/lib/document/docx-generator';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { z } from 'zod';
+import { validatePayloadSize } from '@/lib/security/sanitizer';
+import { auditLog } from '@/lib/security/audit-log';
 
 const exportSchema = z.object({
   personalInfo: z.record(z.string(), z.any()),
@@ -27,14 +29,17 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
+      auditLog({ action: 'auth.unauthorized', path: '/api/export/docx', ip: req.headers.get('x-forwarded-for') ?? undefined });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const json = await req.json();
     
-    // Quick length check to prevent huge payloads
-    if (JSON.stringify(json).length > 50000) {
-       return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
+    // Validar tamaño del payload
+    const sizeCheck = validatePayloadSize(json, 50_000);
+    if (!sizeCheck.safe) {
+      auditLog({ action: 'export.blocked', userId: user.id, path: '/api/export/docx', details: { reason: sizeCheck.reason } });
+      return NextResponse.json({ error: sizeCheck.reason }, { status: 413 });
     }
 
     const parsedData = exportSchema.safeParse(json);
@@ -45,6 +50,12 @@ export async function POST(req: Request) {
     
     const data: CVData = parsedData.data as any;
 
+    auditLog({
+      action: 'export.request',
+      userId: user.id,
+      path: '/api/export/docx',
+    });
+
     // Generar el Buffer del DOCX
     const buffer = await DocxGenerator.generateCV(data);
 
@@ -53,7 +64,7 @@ export async function POST(req: Request) {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'Content-Disposition': `attachment; filename="${data.personalInfo.name.replace(/\s+/g, '_')}_CV.docx"`,
+        'Content-Disposition': `attachment; filename="${data.personalInfo.name.replace(/[^a-zA-Z0-9_\-\s]/g, '').replace(/\s+/g, '_')}_CV.docx"`,
       },
     });
 
