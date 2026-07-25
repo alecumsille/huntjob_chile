@@ -167,6 +167,7 @@ export default function DashboardPage() {
       .from("resumes")
       .select("cv_data")
       .eq("user_id", user.id)
+      .is("target_company", null)
       .order("created_at", { ascending: false })
       .limit(1);
 
