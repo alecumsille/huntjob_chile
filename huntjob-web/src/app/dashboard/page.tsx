@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send,
@@ -65,6 +65,7 @@ export default function DashboardPage() {
 
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [activitiesError, setActivitiesError] = useState(false);
   const [statsData, setStatsData] = useState({ totalApplications: 0, interviewsScheduled: 0 });
 
   const containerVariants = {
@@ -77,44 +78,50 @@ export default function DashboardPage() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
   };
 
-  useEffect(() => {
-    async function loadDashboardData() {
-      setActivitiesLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setActivitiesLoading(false);
-        return;
-      }
+  const loadDashboardData = useCallback(async () => {
+    setActivitiesLoading(true);
+    setActivitiesError(false);
 
-      const [recentRes, allRes] = await Promise.all([
-        supabase
-          .from("applications")
-          .select("id, company_name, job_title, status, applied_at")
-          .eq("user_id", user.id)
-          .order("applied_at", { ascending: false })
-          .limit(4),
-        supabase
-          .from("applications")
-          .select("status")
-          .eq("user_id", user.id),
-      ]);
-
-      if (!recentRes.error && recentRes.data) {
-        setActivities((recentRes.data as ApplicationRow[]).map(toActivity));
-      }
-
-      if (!allRes.error && allRes.data) {
-        const rows = allRes.data as { status: ApplicationStatus }[];
-        setStatsData({
-          totalApplications: rows.length,
-          interviewsScheduled: rows.filter((r) => r.status === "interview_scheduled").length,
-        });
-      }
-
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       setActivitiesLoading(false);
+      return;
     }
-    loadDashboardData();
+
+    const [recentRes, allRes] = await Promise.all([
+      supabase
+        .from("applications")
+        .select("id, company_name, job_title, status, applied_at")
+        .eq("user_id", user.id)
+        .order("applied_at", { ascending: false })
+        .limit(4),
+      supabase
+        .from("applications")
+        .select("status")
+        .eq("user_id", user.id),
+    ]);
+
+    if (recentRes.error || allRes.error) {
+      console.error(recentRes.error || allRes.error);
+      setActivitiesError(true);
+      setActivitiesLoading(false);
+      return;
+    }
+
+    setActivities((recentRes.data as ApplicationRow[]).map(toActivity));
+
+    const rows = allRes.data as { status: ApplicationStatus }[];
+    setStatsData({
+      totalApplications: rows.length,
+      interviewsScheduled: rows.filter((r) => r.status === "interview_scheduled").length,
+    });
+
+    setActivitiesLoading(false);
   }, [supabase]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   const runApply = async (profile: CVData) => {
     setIsProcessing(true);
@@ -135,18 +142,9 @@ export default function DashboardPage() {
       setWorkflowStatus("3/3: ¡CV Optimizado con éxito!");
       setResult(data);
 
-      setActivities(prev => [
-        {
-          role: data.jobOffer.title || "Nuevo Rol",
-          company: data.jobOffer.company || "Nueva Empresa",
-          status: STATUS_META.pending.label,
-          time: "Justo ahora",
-          color: STATUS_META.pending.color,
-          bg: STATUS_META.pending.bg,
-        },
-        ...prev
-      ].slice(0, 4));
-      setStatsData((prev) => ({ ...prev, totalApplications: prev.totalApplications + 1 }));
+      // Re-fetch real state instead of splicing an optimistic entry — avoids racing
+      // with the initial-load effect and keeps a single source of truth.
+      await loadDashboardData();
     } catch (e) {
       console.error(e);
       setWorkflowStatus("Error al procesar la oferta.");
@@ -165,12 +163,19 @@ export default function DashboardPage() {
       return;
     }
 
-    const { data: resumes } = await supabase
+    const { data: resumes, error: resumesError } = await supabase
       .from("resumes")
       .select("cv_data")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(1);
+
+    if (resumesError) {
+      console.error(resumesError);
+      setIsProcessing(false);
+      setWorkflowStatus("No pudimos verificar tu CV guardado. Intenta de nuevo.");
+      return;
+    }
 
     if (resumes && resumes.length > 0) {
       await runApply(resumes[0].cv_data as CVData);
@@ -185,11 +190,17 @@ export default function DashboardPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    await supabase.from("resumes").insert({
+    const { error: insertError } = await supabase.from("resumes").insert({
       user_id: user.id,
       name: "Mi CV Base",
       cv_data: cvData,
     });
+
+    if (insertError) {
+      console.error(insertError);
+      setWorkflowStatus("No pudimos guardar tu CV. Intenta de nuevo.");
+      return;
+    }
 
     await runApply(cvData);
   };
@@ -366,7 +377,19 @@ export default function DashboardPage() {
           <h2 className="text-lg font-bold text-white">Actividad Reciente</h2>
         </div>
 
-        {activitiesLoading ? (
+        {activitiesError ? (
+          <div className="p-6">
+            <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-rose-300">No pudimos cargar tu actividad reciente.</p>
+              <button
+                onClick={() => loadDashboardData()}
+                className="px-3 py-1.5 text-sm font-medium bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 rounded-lg transition-colors flex-shrink-0"
+              >
+                Reintentar
+              </button>
+            </div>
+          </div>
+        ) : activitiesLoading ? (
           <div className="p-12 flex justify-center">
             <Loader2 className="h-6 w-6 text-zinc-500 animate-spin" />
           </div>
