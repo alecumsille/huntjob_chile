@@ -95,6 +95,14 @@ El repo no tiene framework de test instalado (ni jest ni vitest). Agregar uno pa
 5. Dashboard: feed de actividad muestra postulaciones reales (o estado vacío) — cero nombres inventados.
 6. `/dashboard/applications` con tabla vacía → estado vacío real; forzando un error de red → banner de error, nunca `mockApplications`.
 
+## Addendum 2026-07-25: Stats Grid
+
+Al escribir el plan de implementación se detectó que el "Stats Grid" de `dashboard/page.tsx` (Postulaciones Automáticas: 142, Vistas de Reclutadores: 89, Entrevistas Agendadas: 12, Score ATS Promedio: 92/100) también son datos 100% hardcodeados — no estaba cubierto explícitamente arriba. Se agrega al alcance de este mismo spec (confirmado con Alejandro):
+
+- **Postulaciones Automáticas** → `count(applications)` real del usuario.
+- **Entrevistas Agendadas** → `count(applications where status='interview_scheduled')` real.
+- **Vistas de Reclutadores** y **Score ATS Promedio** → se sacan del grid. No existe ninguna fuente real para ninguna de las dos hoy (no hay tracking de vistas, y el ATS score se calcula al vuelo por oferta pero nunca se persiste) — inventar un cálculo para mostrar "algo" sería el mismo problema que estamos resolviendo. Quedan anotadas como deuda/feature futura si se decide trackearlas de verdad.
+
 ## Fuera de alcance (anotado, no se hace acá)
 
 - Gate de `ai_credits_limit` en `/api/apply` (hueco preexistente, no introducido por este cambio).
