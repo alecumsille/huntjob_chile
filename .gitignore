@@ -4,3 +4,11 @@ salidas_pdf/
 venv/
 perfil/
 .streamlit/secrets.toml
+
+# env files anywhere in the repo (found an ungitignored .env.local at repo root, 2026-07-25)
+.env
+.env.*
+!.env.example
+
+# handoff doc has historically carried live credentials pasted in as reference text
+huntjob-web/HANDOFF_CONTEXT.md
