@@ -28,7 +28,7 @@ function getClientIdentifier(request: NextRequest, userId?: string): string {
 }
 
 function isAiRoute(pathname: string): boolean {
-  return pathname.startsWith('/api/chat') || pathname.startsWith('/api/apply');
+  return pathname.startsWith('/api/chat') || pathname.startsWith('/api/apply') || pathname.startsWith('/api/cv/parse');
 }
 
 function isAuthRoute(pathname: string): boolean {
