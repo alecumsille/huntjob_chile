@@ -28,24 +28,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const formData = await req.formData();
-  const file = formData.get('file');
-
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: 'Falta el archivo PDF.' }, { status: 400 });
-  }
-
-  if (file.type !== 'application/pdf') {
-    return NextResponse.json({ error: 'Solo se aceptan archivos PDF.' }, { status: 400 });
-  }
-
-  if (file.size > MAX_PDF_BYTES) {
-    return NextResponse.json({ error: 'El PDF supera el límite de 4MB.' }, { status: 413 });
-  }
-
-  auditLog({ action: 'apply.request', userId: user.id, path: '/api/cv/parse', details: { filename: file.name } });
-
   try {
+    const formData = await req.formData();
+    const file = formData.get('file');
+
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: 'Falta el archivo PDF.' }, { status: 400 });
+    }
+
+    if (file.type !== 'application/pdf') {
+      return NextResponse.json({ error: 'Solo se aceptan archivos PDF.' }, { status: 400 });
+    }
+
+    if (file.size > MAX_PDF_BYTES) {
+      return NextResponse.json({ error: 'El PDF supera el límite de 4MB.' }, { status: 413 });
+    }
+
+    auditLog({ action: 'apply.request', userId: user.id, path: '/api/cv/parse', details: { filename: file.name } });
+
     const pdfBuffer = Buffer.from(await file.arrayBuffer());
 
     const result = await executeWithFallback((model) =>
