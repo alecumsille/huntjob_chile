@@ -102,9 +102,14 @@ export default function ApplicationsPage() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       {loadError && (
-        <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="text-sm text-rose-400">No pudimos cargar tus postulaciones.</p>
-          <Button variant="outline" size="sm" onClick={fetchApplications} className="border-rose-500/30 text-rose-400 hover:bg-rose-500/10">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchApplications}
+            className="border-rose-500/30 text-rose-400 hover:bg-rose-500/10 flex-shrink-0"
+          >
             Reintentar
           </Button>
         </div>

@@ -14,6 +14,7 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import { formatRelativeTime } from "@/lib/utils/time";
 import { CvCaptureForm } from "@/components/cv/CvCaptureForm";
+import { Button } from "@/components/ui/button";
 import type { CVData } from "@/lib/document/docx-generator";
 
 type ApplicationStatus = "pending" | "interview_scheduled" | "rejected" | "offer";
@@ -383,13 +384,15 @@ export default function DashboardPage() {
         {activitiesError ? (
           <div className="p-6">
             <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <p className="text-sm text-rose-300">No pudimos cargar tu actividad reciente.</p>
-              <button
+              <p className="text-sm text-rose-400">No pudimos cargar tu actividad reciente.</p>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => loadDashboardData()}
-                className="px-3 py-1.5 text-sm font-medium bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 rounded-lg transition-colors flex-shrink-0"
+                className="border-rose-500/30 text-rose-400 hover:bg-rose-500/10 flex-shrink-0"
               >
                 Reintentar
-              </button>
+              </Button>
             </div>
           </div>
         ) : activitiesLoading ? (
