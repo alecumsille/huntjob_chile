@@ -10,6 +10,8 @@ export type AuditAction =
   | 'chat.blocked'
   | 'apply.request'
   | 'apply.blocked'
+  | 'evaluate.request'
+  | 'evaluate.blocked'
   | 'export.request'
   | 'export.blocked'
   | 'ratelimit.exceeded'
