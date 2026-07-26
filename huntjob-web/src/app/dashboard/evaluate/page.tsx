@@ -25,6 +25,12 @@ interface EvaluateResponse {
     personalization: { score: number; angle: string };
     interviewPrep: { score: number; questions: InterviewQuestion[] };
   };
+  cvMatch: {
+    overallScore: number;
+    dimensions: { hardSkills: number; seniority: number; education: number; softSkills: number };
+    missingKeywords: string[];
+    criticalFeedback: string;
+  };
   jobOffer: { title: string; company: string };
   error?: string;
 }
@@ -35,13 +41,31 @@ export default function EvaluatePage() {
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<EvaluateResponse | null>(null);
+  // URL efectivamente evaluada (capturada al momento de setear el reporte),
+  // para que editar el input despues de evaluar no desincronice el link
+  // entre la postulacion y la evaluacion que la origino (ver handleApply).
+  const [evaluatedUrl, setEvaluatedUrl] = useState<string | null>(null);
+  // CV base ya resuelto en handleEvaluate, reusado en handleApply para no
+  // volver a golpear la tabla resumes.
+  const [baseProfile, setBaseProfile] = useState<unknown>(null);
 
   const supabase = createClient();
+
+  const handleUrlChange = (value: string) => {
+    setUrl(value);
+    // Si ya habia un reporte generado, editar la URL lo invalida: sin esto
+    // se podria postular con un evaluationId que apunta a una oferta distinta.
+    if (report) {
+      setReport(null);
+      setEvaluatedUrl(null);
+    }
+  };
 
   const handleEvaluate = async () => {
     setLoading(true);
     setError(null);
     setReport(null);
+    setEvaluatedUrl(null);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -60,6 +84,7 @@ export default function EvaluatePage() {
         setLoading(false);
         return;
       }
+      setBaseProfile(profile);
 
       const res = await fetch("/api/evaluate", {
         method: "POST",
@@ -68,9 +93,17 @@ export default function EvaluatePage() {
       });
       const json: EvaluateResponse = await res.json();
       if (!res.ok) {
-        setError(json.error || "No se pudo evaluar la oferta.");
+        // El catch-all de /api/evaluate (500) devuelve un mensaje generico en
+        // ingles; para los demas codigos (400/403/413/422) la ruta ya
+        // responde con un mensaje en espanol pensado para mostrarse tal cual.
+        setError(
+          res.status === 500
+            ? "No se pudo evaluar la oferta. Intenta de nuevo en unos minutos."
+            : json.error || "No se pudo evaluar la oferta."
+        );
       } else {
         setReport(json);
+        setEvaluatedUrl(url);
       }
     } catch {
       setError("Error de red evaluando la oferta.");
@@ -80,20 +113,14 @@ export default function EvaluatePage() {
   };
 
   const handleApply = async () => {
-    if (!report) return;
+    if (!report || !evaluatedUrl) return;
     setApplying(true);
     setError(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: resumes } = await supabase
-        .from("resumes")
-        .select("cv_data")
-        .eq("user_id", user.id)
-        .is("target_company", null)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      const profile = resumes?.[0]?.cv_data;
+      if (!baseProfile) {
+        setError("Necesitas subir tu CV base antes de postular.");
+        return;
+      }
 
       // El insert de job_evaluations en /api/evaluate puede fallar en silencio
       // (comportamiento heredado de /api/apply) y devolver evaluationId: null.
@@ -102,8 +129,8 @@ export default function EvaluatePage() {
       // string real, para que la postulación siga adelante igual (sin el
       // vínculo a la evaluación).
       const body: { url: string; profile: unknown; evaluationId?: string } = {
-        url,
-        profile,
+        url: evaluatedUrl,
+        profile: baseProfile,
       };
       if (report.evaluationId) {
         body.evaluationId = report.evaluationId;
@@ -140,7 +167,7 @@ export default function EvaluatePage() {
               type="text"
               placeholder="https://www.getonbrd.com/jobs/..."
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => handleUrlChange(e.target.value)}
               className="w-full bg-black/50 border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white"
             />
           </div>
@@ -177,6 +204,25 @@ export default function EvaluatePage() {
             <Button onClick={handleApply} disabled={applying} className="mt-4 bg-emerald-600 hover:bg-emerald-500 text-white w-full">
               {applying ? "Postulando..." : "Aplicar con CV tailorado para esta oferta"}
             </Button>
+          </Card>
+
+          <Card className="bg-zinc-900/40 border-white/10 p-6">
+            <Badge variant="outline" className="mb-2">
+              Match con tu CV · {(1.0 + (report.cvMatch.overallScore / 100) * 4.0).toFixed(1)}
+            </Badge>
+            <p className="text-sm text-zinc-300">{report.cvMatch.criticalFeedback}</p>
+            {report.cvMatch.missingKeywords.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs text-zinc-500 mb-1.5">Palabras clave que le faltan a tu CV:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {report.cvMatch.missingKeywords.map((kw, i) => (
+                    <Badge key={i} variant="outline" className="text-xs text-amber-400 border-amber-500/30">
+                      {kw}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </Card>
 
           <Card className="bg-zinc-900/40 border-white/10 p-6">

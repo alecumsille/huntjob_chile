@@ -13,6 +13,7 @@ import {
   Bell,
   Search,
   Menu,
+  ClipboardCheck,
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -44,6 +45,7 @@ export default function DashboardLayout({
     { icon: LayoutDashboard, label: "Resumen", href: "/dashboard" },
     { icon: Briefcase, label: "Postulaciones", href: "/dashboard/applications" },
     { icon: FileText, label: "Currículums", href: "/dashboard/resumes" },
+    { icon: ClipboardCheck, label: "Evaluar Oferta", href: "/dashboard/evaluate" },
     { icon: Settings, label: "Configuración", href: "/dashboard/settings" },
   ];
 
