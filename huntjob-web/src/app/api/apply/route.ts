@@ -32,9 +32,10 @@ function isAllowedUrl(url: string): boolean {
 const applySchema = z.object({
   url: z.string().url("Debe ser una URL válida").max(500, "URL demasiado larga"),
   profile: z.record(z.string(), z.any()).refine(
-    val => JSON.stringify(val).length < 50000, 
+    val => JSON.stringify(val).length < 50000,
     "El perfil es demasiado extenso"
-  )
+  ),
+  evaluationId: z.string().uuid().optional(),
 });
 
 export async function POST(req: Request) {
@@ -100,7 +101,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid input', details: parsedData.error.issues }, { status: 400 });
     }
 
-    const { url, profile } = parsedData.data;
+    const { url, profile, evaluationId } = parsedData.data;
 
     // Validar dominio de la URL
     if (!isAllowedUrl(url)) {
@@ -139,6 +140,7 @@ export async function POST(req: Request) {
         job_url: url,
         status: 'pending',
         adapted_cv: adaptedCv,
+        evaluation_id: evaluationId ?? null,
       });
 
       await supabase.from('resumes').insert({
