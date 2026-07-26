@@ -235,6 +235,31 @@ export default function DashboardPage() {
     }
   };
 
+  const handleDownloadPdf = async () => {
+    if (!result?.adaptedCv) return;
+    try {
+      const res = await fetch('/api/export/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(result.adaptedCv)
+      });
+      if (!res.ok) throw new Error("Error en descarga");
+
+      const blob = await res.blob();
+      const objUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objUrl;
+      a.download = `CV_Optimizado_${(result as { jobOffer: { company: string } }).jobOffer.company.replace(/ /g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(objUrl);
+    } catch (err) {
+      console.error(err);
+      alert("Error descargando el PDF");
+    }
+  };
+
   const stats = [
     {
       title: "Postulaciones Automáticas",
@@ -336,13 +361,22 @@ export default function DashboardPage() {
                         </p>
                       </div>
 
-                      <button
-                        onClick={handleDownloadDocx}
-                        className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg transition-colors flex items-center gap-2 flex-shrink-0"
-                      >
-                        <Download className="h-4 w-4" />
-                        Descargar Word (.docx)
-                      </button>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <button
+                          onClick={handleDownloadPdf}
+                          className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          <Download className="h-4 w-4" />
+                          Descargar PDF
+                        </button>
+                        <button
+                          onClick={handleDownloadDocx}
+                          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          <Download className="h-4 w-4" />
+                          Word (.docx)
+                        </button>
+                      </div>
                     </div>
                   </motion.div>
                 )}

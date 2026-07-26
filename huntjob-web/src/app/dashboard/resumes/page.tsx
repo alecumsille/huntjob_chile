@@ -93,10 +93,11 @@ export default function ResumesPage() {
     }
   };
 
-  const handleDownloadWord = async (resume: Resume) => {
-    setDownloadingId(resume.id);
+  const handleDownload = async (resume: Resume, format: "pdf" | "docx") => {
+    const key = `${resume.id}-${format}`;
+    setDownloadingId(key);
     try {
-      const res = await fetch('/api/export/docx', {
+      const res = await fetch(`/api/export/${format}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(resume.cv_data)
@@ -108,7 +109,7 @@ export default function ResumesPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${resume.name.replace(/\s+/g, '_')}.docx`;
+      a.download = `${resume.name.replace(/\s+/g, '_')}.${format}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -179,23 +180,37 @@ export default function ResumesPage() {
                 {cvError && <p className="text-sm text-rose-400 mt-1">{cvError}</p>}
               </div>
             </div>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex flex-wrap gap-2 shrink-0">
               {baseResume && (
-                <Button
-                  onClick={handleImprove}
-                  disabled={improving || savingCv}
-                  variant="outline"
-                >
-                  {improving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Mejorando...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="mr-2 h-4 w-4" /> Mejorar mi CV base
-                    </>
-                  )}
-                </Button>
+                <>
+                  <Button
+                    onClick={() => handleDownload(baseResume, "pdf")}
+                    disabled={downloadingId === `${baseResume.id}-pdf`}
+                    variant="outline"
+                  >
+                    {downloadingId === `${baseResume.id}-pdf` ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    Descargar PDF
+                  </Button>
+                  <Button
+                    onClick={handleImprove}
+                    disabled={improving || savingCv}
+                    variant="outline"
+                  >
+                    {improving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Mejorando...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="mr-2 h-4 w-4" /> Mejorar mi CV base
+                      </>
+                    )}
+                  </Button>
+                </>
               )}
               <Button
                 onClick={() => setShowCvForm(true)}
@@ -259,21 +274,38 @@ export default function ResumesPage() {
                   ATS Match Ready
                 </span>
                 
-                <button 
-                  onClick={() => handleDownloadWord(resume)}
-                  disabled={downloadingId === resume.id}
-                  title="Descargar en Word (.docx)"
-                  className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg font-medium text-xs transition-colors flex items-center gap-2 disabled:opacity-50"
-                >
-                  {downloadingId === resume.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Download className="h-4 w-4" />
-                      Descargar .docx
-                    </>
-                  )}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleDownload(resume, "pdf")}
+                    disabled={downloadingId === `${resume.id}-pdf`}
+                    title="Descargar en PDF"
+                    className="px-3 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg font-medium text-xs transition-colors flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {downloadingId === `${resume.id}-pdf` ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4" />
+                        PDF
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleDownload(resume, "docx")}
+                    disabled={downloadingId === `${resume.id}-docx`}
+                    title="Descargar en Word (.docx)"
+                    className="px-3 py-2 bg-white/5 hover:bg-white/10 text-zinc-300 rounded-lg font-medium text-xs transition-colors flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {downloadingId === `${resume.id}-docx` ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4" />
+                        .docx
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           ))}
