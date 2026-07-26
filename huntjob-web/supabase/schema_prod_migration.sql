@@ -144,6 +144,9 @@ CREATE POLICY "Users can view own resumes" ON resumes
 DROP POLICY IF EXISTS "Users can insert own resumes" ON resumes;
 CREATE POLICY "Users can insert own resumes" ON resumes
   FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own resumes" ON resumes;
+CREATE POLICY "Users can update own resumes" ON resumes
+  FOR UPDATE USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS "Users can delete own resumes" ON resumes;
 CREATE POLICY "Users can delete own resumes" ON resumes
   FOR DELETE USING (auth.uid() = user_id);
