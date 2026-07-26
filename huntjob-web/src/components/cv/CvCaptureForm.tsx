@@ -12,6 +12,8 @@ import type { CVData } from "@/lib/document/docx-generator";
 interface CvCaptureFormProps {
   onComplete: (cvData: CVData) => void;
   onCancel: () => void;
+  /** Si viene seteado, el formulario arranca directo en "edit" con estos datos (ej. un CV recién mejorado por IA), sin pasar por el paso de upload. */
+  initialCv?: CVData;
 }
 
 const EMPTY_CV: CVData = {
@@ -22,12 +24,12 @@ const EMPTY_CV: CVData = {
   skills: [],
 };
 
-export function CvCaptureForm({ onComplete, onCancel }: CvCaptureFormProps) {
-  const [step, setStep] = useState<"upload" | "edit">("upload");
+export function CvCaptureForm({ onComplete, onCancel, initialCv }: CvCaptureFormProps) {
+  const [step, setStep] = useState<"upload" | "edit">(initialCv ? "edit" : "upload");
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState("");
-  const [cv, setCv] = useState<CVData>(EMPTY_CV);
-  const [skillsText, setSkillsText] = useState("");
+  const [cv, setCv] = useState<CVData>(initialCv ?? EMPTY_CV);
+  const [skillsText, setSkillsText] = useState((initialCv?.skills ?? []).join(", "));
   const [formError, setFormError] = useState("");
 
   const handleFileUpload = async (file: globalThis.File) => {

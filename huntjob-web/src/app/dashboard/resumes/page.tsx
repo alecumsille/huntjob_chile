@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, FileText, Download, Loader2, Sparkles, UploadCloud, RefreshCw } from "lucide-react";
+import { Plus, FileText, Download, Loader2, Sparkles, UploadCloud, RefreshCw, Wand2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { CvCaptureForm } from "@/components/cv/CvCaptureForm";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,8 @@ export default function ResumesPage() {
   const [showCvForm, setShowCvForm] = useState(false);
   const [savingCv, setSavingCv] = useState(false);
   const [cvError, setCvError] = useState("");
+  const [improving, setImproving] = useState(false);
+  const [draftCv, setDraftCv] = useState<CVData | null>(null);
 
   const loadResumes = async () => {
     try {
@@ -61,12 +63,33 @@ export default function ResumesPage() {
       if (!user) return;
       await upsertBaseResume(supabase, user.id, cvData);
       setShowCvForm(false);
+      setDraftCv(null);
       await loadResumes();
     } catch (err) {
       console.error(err);
       setCvError("No pudimos guardar tu CV. Intenta de nuevo.");
     } finally {
       setSavingCv(false);
+    }
+  };
+
+  const handleImprove = async () => {
+    setImproving(true);
+    setCvError("");
+    try {
+      const res = await fetch("/api/cv/improve", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setCvError(data.error || "No pudimos mejorar tu CV.");
+        return;
+      }
+      setDraftCv(data.cvData as CVData);
+      setShowCvForm(true);
+    } catch (err) {
+      console.error(err);
+      setCvError("No pudimos mejorar tu CV. Intenta de nuevo.");
+    } finally {
+      setImproving(false);
     }
   };
 
@@ -128,7 +151,14 @@ export default function ResumesPage() {
 
       <motion.div variants={itemVariants}>
         {showCvForm ? (
-          <CvCaptureForm onComplete={handleCvCaptureComplete} onCancel={() => setShowCvForm(false)} />
+          <CvCaptureForm
+            onComplete={handleCvCaptureComplete}
+            onCancel={() => {
+              setShowCvForm(false);
+              setDraftCv(null);
+            }}
+            initialCv={draftCv ?? undefined}
+          />
         ) : (
           <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -149,22 +179,40 @@ export default function ResumesPage() {
                 {cvError && <p className="text-sm text-rose-400 mt-1">{cvError}</p>}
               </div>
             </div>
-            <Button
-              onClick={() => setShowCvForm(true)}
-              disabled={savingCv}
-              variant={baseResume ? "outline" : "default"}
-              className="shrink-0"
-            >
-              {baseResume ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" /> Reemplazar CV
-                </>
-              ) : (
-                <>
-                  <UploadCloud className="mr-2 h-4 w-4" /> Subir CV
-                </>
+            <div className="flex gap-2 shrink-0">
+              {baseResume && (
+                <Button
+                  onClick={handleImprove}
+                  disabled={improving || savingCv}
+                  variant="outline"
+                >
+                  {improving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Mejorando...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="mr-2 h-4 w-4" /> Mejorar mi CV base
+                    </>
+                  )}
+                </Button>
               )}
-            </Button>
+              <Button
+                onClick={() => setShowCvForm(true)}
+                disabled={savingCv || improving}
+                variant={baseResume ? "outline" : "default"}
+              >
+                {baseResume ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" /> Reemplazar CV
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud className="mr-2 h-4 w-4" /> Subir CV
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         )}
       </motion.div>
