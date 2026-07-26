@@ -15,6 +15,7 @@ import { createClient } from "@/utils/supabase/client";
 import { formatRelativeTime } from "@/lib/utils/time";
 import { CvCaptureForm } from "@/components/cv/CvCaptureForm";
 import { Button } from "@/components/ui/button";
+import { upsertBaseResume } from "@/lib/resumes/upsert-base-resume";
 import type { CVData } from "@/lib/document/docx-generator";
 
 type ApplicationStatus = "pending" | "interview_scheduled" | "rejected" | "offer";
@@ -194,14 +195,10 @@ export default function DashboardPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error: insertError } = await supabase.from("resumes").insert({
-      user_id: user.id,
-      name: "Mi CV Base",
-      cv_data: cvData,
-    });
-
-    if (insertError) {
-      console.error(insertError);
+    try {
+      await upsertBaseResume(supabase, user.id, cvData);
+    } catch (error) {
+      console.error(error);
       setWorkflowStatus("No pudimos guardar tu CV. Intenta de nuevo.");
       return;
     }

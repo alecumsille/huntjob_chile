@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, FileText, Download, Loader2, Sparkles } from "lucide-react";
+import { Plus, FileText, Download, Loader2, Sparkles, UploadCloud, RefreshCw } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { CvCaptureForm } from "@/components/cv/CvCaptureForm";
+import { Button } from "@/components/ui/button";
+import { upsertBaseResume } from "@/lib/resumes/upsert-base-resume";
+import type { CVData } from "@/lib/document/docx-generator";
 import Link from "next/link";
 
 interface Resume {
@@ -17,29 +21,54 @@ interface Resume {
 
 export default function ResumesPage() {
   const supabase = createClient();
+  const [baseResume, setBaseResume] = useState<Resume | null>(null);
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [showCvForm, setShowCvForm] = useState(false);
+  const [savingCv, setSavingCv] = useState(false);
+  const [cvError, setCvError] = useState("");
+
+  const loadResumes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("resumes")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (data && !error) {
+        setBaseResume((data as Resume[]).find((r) => !r.target_company) || null);
+        setResumes((data as Resume[]).filter((r) => !!r.target_company));
+      }
+    } catch (err) {
+      console.error("Error fetching resumes:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadResumes() {
-      try {
-        const { data, error } = await supabase
-          .from("resumes")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (data && !error) {
-          setResumes(data as Resume[]);
-        }
-      } catch (err) {
-        console.error("Error fetching resumes:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadResumes();
+    (async () => {
+      await loadResumes();
+    })();
   }, []);
+
+  const handleCvCaptureComplete = async (cvData: CVData) => {
+    setSavingCv(true);
+    setCvError("");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await upsertBaseResume(supabase, user.id, cvData);
+      setShowCvForm(false);
+      await loadResumes();
+    } catch (err) {
+      console.error(err);
+      setCvError("No pudimos guardar tu CV. Intenta de nuevo.");
+    } finally {
+      setSavingCv(false);
+    }
+  };
 
   const handleDownloadWord = async (resume: Resume) => {
     setDownloadingId(resume.id);
@@ -96,6 +125,49 @@ export default function ResumesPage() {
           </Link>
         </motion.div>
       </div>
+
+      <motion.div variants={itemVariants}>
+        {showCvForm ? (
+          <CvCaptureForm onComplete={handleCvCaptureComplete} onCancel={() => setShowCvForm(false)} />
+        ) : (
+          <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-indigo-500/10 flex items-center justify-center shrink-0">
+                <FileText className="h-6 w-6 text-indigo-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Tu CV Base</h3>
+                {baseResume ? (
+                  <p className="text-sm text-zinc-400">
+                    Guardado el {new Date(baseResume.created_at).toLocaleDateString("es-CL")} — se usa como base para adaptar cada postulación.
+                  </p>
+                ) : (
+                  <p className="text-sm text-zinc-400">
+                    Aún no subes tu CV base. Súbelo en PDF y la IA extrae los datos automáticamente.
+                  </p>
+                )}
+                {cvError && <p className="text-sm text-rose-400 mt-1">{cvError}</p>}
+              </div>
+            </div>
+            <Button
+              onClick={() => setShowCvForm(true)}
+              disabled={savingCv}
+              variant={baseResume ? "outline" : "default"}
+              className="shrink-0"
+            >
+              {baseResume ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" /> Reemplazar CV
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="mr-2 h-4 w-4" /> Subir CV
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+      </motion.div>
 
       {loading ? (
         <div className="py-20 flex justify-center items-center">
