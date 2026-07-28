@@ -91,5 +91,5 @@ Report Bugs or Suggestions: Open an Issue on GitHub detailing the improvement.
 Send Pull Requests: Fork the repository, create your branch (git checkout -b feature/new-feature), and push your changes.
 
 📄 License & Credits
-Developed with ❤️ by Alejandro Cumsille as part of the Cumsille Systems Suite SpA technology ecosystem.
+Developed with ❤️ by Ale Cumsille as part of the Cumsille Systems Suite SpA technology ecosystem.
 Distributed under the MIT License.
