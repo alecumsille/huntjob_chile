@@ -91,5 +91,5 @@ Fehler oder Vorschläge melden: Öffnen Sie ein Issue auf GitHub mit detailliert
 Pull Requests senden: Forken Sie das Repository, erstellen Sie Ihren Branch (git checkout -b feature/neue-funktion) und pushen Sie Ihre Änderungen.
 
 📄 Lizenz & Danksagungen
-Entwickelt mit ❤️ von Alejandro Cumsille als Teil des Technologie-Ökosystems der Cumsille Systems Suite SpA.
+Entwickelt mit ❤️ von Ale Cumsille als Teil des Technologie-Ökosystems der Cumsille Systems Suite SpA.
 Veröffentlicht unter der MIT-Lizenz.
