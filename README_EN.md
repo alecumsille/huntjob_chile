@@ -4,7 +4,7 @@
   <img src="assets/icon.png" width="90" alt="HuntJob Chile Logo">
 </p>
 
-🇬🇧 English Version
+🇬🇧
 Intelligent Job Platform & ATS Audit
  <sub>An official development by CSS SpA <a href="https://cumsille.tech"><b>CSS SpA</b></a></sub>
 </p>
