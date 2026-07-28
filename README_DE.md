@@ -14,7 +14,7 @@ Intelligente Job-Plattform & ATS-Audit
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License"></a>
 </p>
 
-🇩🇪 Deutsche Version (README_DE.md)
+🇩🇪 
 Intelligente Job-Plattform & ATS-Prüfung
 Eine offizielle Entwicklung der Cumsille Systems Suite SpA
 
