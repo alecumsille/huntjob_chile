@@ -4,7 +4,7 @@
   <img src="assets/icon.png" width="90" alt="HuntJob Chile Logo">
 </p>
 Intelligente Job-Plattform & ATS-Audit
-Eine offizielle Entwicklung der Cumsille Systems Suite SpA
+Eine offizielle Entwicklung der CSS SpA
 
 <p align="center">
   <a href="https://huntjob.cumsille.me"><img src="https://img.shields.io/badge/Sitio_Web-huntjob.cumsille.me-blue?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Sitio Web"></a>
