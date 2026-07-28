@@ -1,3 +1,19 @@
+<p align="center">
+  <a href="https://cumsille.tech"><img src="assets/css_logo.png" width="160" alt="Cumsille Systems Suite Logo"></a>
+  <br>
+  <img src="assets/icon.png" width="90" alt="HuntJob Chile Logo">
+</p>
+
+Intelligente Job-Plattform & ATS-Audit
+Eine offizielle Entwicklung der Cumsille Systems Suite SpA
+
+<p align="center">
+  <a href="https://huntjob.cumsille.me"><img src="https://img.shields.io/badge/Sitio_Web-huntjob.cumsille.me-blue?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Sitio Web"></a>
+  <a href="https://cumsille.tech"><img src="https://img.shields.io/badge/Ecosistema-cumsille.tech-purple?style=for-the-badge&logo=opsgenie&logoColor=white" alt="Cumsille Tech"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License"></a>
+</p>
+
 🇩🇪 Deutsche Version (README_DE.md)
 Intelligente Job-Plattform & ATS-Prüfung
 Eine offizielle Entwicklung der Cumsille Systems Suite SpA
