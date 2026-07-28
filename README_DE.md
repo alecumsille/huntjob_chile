@@ -4,7 +4,7 @@
   <img src="assets/icon.png" width="90" alt="HuntJob Chile Logo">
 </p>
 
-Intelligente Job-Plattform & ATS-Audit
+       Intelligente Job-Plattform & ATS-Audit
 Eine offizielle Entwicklung der Cumsille Systems Suite SpA
 
 <p align="center">
