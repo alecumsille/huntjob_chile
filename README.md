@@ -142,7 +142,7 @@ Esto creará el acceso directo en el menú de tu sistema con la ventana nativa (
 
 ## 📄 Licencia & Créditos
 
-Desarrollado con ❤️ por **Alejandro Cumsille** como parte del ecosistema tecnológico de **[Cumsille Systems Suite SpA](https://cumsille.tech)**.  
+Desarrollado con ❤️ por **Ale Cumsille** como parte del ecosistema tecnológico de **[Cumsille Systems Suite SpA](https://cumsille.tech)**.  
 Distribuido bajo la **Licencia MIT**.  
 - **Aplicación Web:** [https://huntjob.cumsille.me](https://huntjob.cumsille.me)  
 - **Sitio Corporativo:** [https://cumsille.tech](https://cumsille.tech)
