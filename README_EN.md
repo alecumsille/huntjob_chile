@@ -6,7 +6,9 @@
 
 🇬🇧
 Intelligent Job Platform & ATS Audit
- <sub>An official development by CSS SpA <a href="https://cumsille.tech"><b>CSS SpA</b></a></sub>
+
+<sub>An official development by <a href="https://cumsille.tech"><b>CSS SpA</b></a></sub>
+<p align="center"> 
 </p>
 
 Huntjob Chile is the career acceleration suite designed for professionals and talent in Chile. It brings together in a single place real-time searches across the country's main portals (Get on Board, Chiletrabajos, Trabajando, Laborum, and LinkedIn), audits your profile against job openings using next-generation Artificial Intelligence, and generates optimized PDF resumes designed to beat ATS (Applicant Tracking Systems) filters.
